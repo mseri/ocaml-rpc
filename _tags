@@ -1,0 +1,26 @@
+# OASIS_START
+# DO NOT EDIT (digest: 0c74023354b99c4232ff15f1e5353af5)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library rpc
+"lib/rpc.cmxs": use_rpc
+<lib/*.ml{,i,y}>: package(xmlm)
+# Library ppx_deriving_rpc
+"ppx/ppx_deriving_rpc.cmxs": use_ppx_deriving_rpc
+<ppx/*.ml{,i,y}>: package(compiler-libs.common)
+<ppx/*.ml{,i,y}>: package(ppx_deriving)
+<ppx/*.ml{,i,y}>: package(ppx_deriving.api)
+<ppx/*.ml{,i,y}>: package(ppx_tools.metaquot)
+# OASIS_STOP
