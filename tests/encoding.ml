@@ -1,11 +1,11 @@
-type t = string with rpc
+type t = string [@@deriving rpc]
 
 let _ =
 	let t = "<provision><value><int>4</int></value>" in
-	let r = rpc_of_t t in
+	let r = rpc_of t in
 	Printf.printf "r = %s\n%!" (Rpc.to_string r);
 
-	let t' = t_of_rpc r in
+	let t' = of_rpc r in
 	Printf.printf "t = t : %b'\n%!" (t = t');
 	assert (t = t');
 

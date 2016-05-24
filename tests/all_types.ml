@@ -17,10 +17,10 @@ type t =
   | Bar of (int * float)
   | Baz
   | Boo of int option
-  with rpc
+  [@@deriving rpc]
 
 module M = struct
-  type m = t with rpc
+  type m = t [@@deriving rpc]
 end
 
 type 'a x = {
@@ -37,7 +37,7 @@ type 'a x = {
   f8: t list;
   f9: int option;
   progress: int array;
-} with rpc ("f5" -> "type", "f7" -> "let")
+} [@@deriving rpc]
 
 let file_of_string fname s =
   let oc = open_out fname in

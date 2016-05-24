@@ -5,15 +5,15 @@ OCAMLFLAGS = -annot -g
 PACKS = rpclib,lwt,lwt.unix
 EXAMPLES = \
 	all_types \
-	phantom \
 	xapi \
 	json \
 	option \
 	encoding \
-	dict \
-	variants \
-	client \
-	client_lwt
+	dict 
+#	variants 
+#	client \
+#	client_lwt \
+#	phantom
 
 EXECS=$(foreach example, $(EXAMPLES), $(example).opt)
 
@@ -24,22 +24,14 @@ all: $(EXECS)
 %.run: %
 	./$?
 
-client.opt: idl_test.cmx idl_test.cmi client.cmx
-	$(OCAMLOPT) -linkpkg -package $(PACKS) -o $@ idl_test.cmx client.cmx
-
-client_lwt.opt: idl_test.cmx idl_test.cmi client_lwt.cmx
-	$(OCAMLOPT) -linkpkg -package $(PACKS) -o $@ idl_test.cmx client_lwt.cmx
-idl_test.cmx: idl_test.ml idl_test.cmi
-	$(OCAMLOPT) -package $(PACKS),rpclib.idl -syntax camlp4o -c -o $@ $<
-
 %.opt: %.cmx
 	$(OCAMLOPT) -linkpkg -package $(PACKS) -o $@ $<
 
 %.cmx: %.ml
-	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),rpclib.syntax -syntax camlp4o -c -o $@ $<
+	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),ppx_deriving_rpc -c -o $@ $<
 
 %.cmi: %.mli
-	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),rpclib.syntax -syntax camlp4o -c -o $@ $<
+	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),ppx_deriving_rpc -c -o $@ $<
 
 %_gen: %.ml
 	camlp4o $(shell ocamlfind query rpclib.syntax -r -format "-I %d %a" -predicates syntax,preprocessor) $< -printer o > $@.ml
