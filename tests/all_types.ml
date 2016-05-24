@@ -15,6 +15,8 @@
 type t =
   | Foo of int
   | Bar of (int * float)
+  | Baz
+  | Boo of int option
   with rpc
 
 module M = struct
@@ -32,14 +34,38 @@ type 'a x = {
   f5: int;
   f6: (unit * char) list;
   f7: 'a list;
+  f8: t list;
+  f9: int option;
   progress: int array;
 } with rpc ("f5" -> "type", "f7" -> "let")
+
+let file_of_string fname s =
+  let oc = open_out fname in
+  Printf.fprintf oc "%s" s;
+  close_out oc
+
+let file_exists f =
+  try ignore (Unix.stat f); true
+  with _ -> false
+
+let string_of_file fname =
+  let ic = open_in fname in
+  let rec read so_far =
+    try
+      let line = input_line ic in
+      read (line::so_far)
+    with End_of_file ->
+      close_in ic;
+      String.concat "" (List.rev so_far)
+  in
+  read [] 
+
 
 let _ =
   let x = {
     foo= Foo 3;
     bar= "ha          ha";
-    gna=[1.; 2.; 3.; 4.; Unix.gettimeofday () ];
+    gna=[1.; 2.; 3.; 4.; 1464103984.0 ];
     f2 = [| "hi",["hi"]; "hou",["hou";"hou"]; "foo", ["b";"a";"r"] |];
     f1 = Some (None, [true], [[1.]; [2.;3.]]);
     f3 = Int32.max_int;
@@ -47,6 +73,8 @@ let _ =
     f5 = max_int;
     f6 = [ (),'a' ; (),'b' ; (),'c'; (),'d' ; (),'e' ];
     f7 = [ Foo 1; Foo 2; Foo 3 ];
+    f8 = [ Foo 1; Bar (2, 2.0); Baz; Boo (Some 1); Boo None];
+    f9 = None;
     progress = [| 0; 1; 2; 3; 4; 5 |];
   } in
 
@@ -57,6 +85,9 @@ let _ =
   let rpc_xml = Xmlrpc.to_string rpc in
   let rpc_json = Jsonrpc.to_string rpc in
 
+  file_of_string "x.xml" rpc_xml;
+  file_of_string "x.json" rpc_json;
+      
   Printf.printf "\n==rpc_xml==\n%s\n" rpc_xml;
   Printf.printf "\n==json==\n%s\n" rpc_json;
 
@@ -73,6 +104,13 @@ let _ =
   Printf.printf "\n==Sanity check 1==\nx=x_xml: %b\nx=x_json: %b\n" (x = x_xml) (x = x_json);
   assert (x = x_xml && x = x_json);
 
+  if file_exists "x.reference.xml" && file_exists "x.reference.json" then begin
+    Printf.printf "\n==Backwards compatibility check==\n";
+    let x_old_xml = string_of_file "x.reference.xml" |> Xmlrpc.of_string |> x_of_rpc in
+    let x_old_json = string_of_file "x.reference.json" |> Jsonrpc.of_string |> x_of_rpc in
+    assert (x=x_old_xml && x=x_old_json);
+  end;
+  
   (* Testing calls and responses *)
 
   let call = Rpc.call "foo" [ rpc ] in
