@@ -16,6 +16,14 @@ let is_option typ =
   | [%type: [%t? typ] option] -> true
   | _ -> false
 
+let attr_string name default attrs =
+  match Ppx_deriving.attr ~deriver name attrs |>
+        Ppx_deriving.Arg.(get_attr ~deriver string) with
+  | Some x -> x
+  | None   -> default
+
+let attr_key  = attr_string "key"
+
 module Of_rpc = struct
   
   let rec expr_of_typ quoter typ =
@@ -70,17 +78,18 @@ module Of_rpc = struct
       | Ptype_record labels, _ ->
         let fields =
           labels |> List.mapi (fun i { pld_name = { txt = name }; pld_type; pld_attributes } ->
+              let rpc_name = attr_key name pld_attributes in
               let field =
                 if is_option pld_type
                 then
-                  [%expr (if List.mem_assoc [%e str name] dict
+                  [%expr (if List.mem_assoc [%e str rpc_name] dict
                           then
                             [%e expr_of_typ quoter pld_type]
-                              (Rpc.Enum [(List.assoc [%e str name] dict)])
+                              (Rpc.Enum [(List.assoc [%e str rpc_name] dict)])
                           else None)]
                 else
                   [%expr [%e expr_of_typ quoter pld_type]
-                           (List.assoc [%e str name] dict)]
+                           (List.assoc [%e str rpc_name] dict)]
               in name,field)
         in
         [%expr fun x -> match x with | Rpc.Dict dict -> [%e record fields] | _ -> failwith "expecting dict"]
@@ -161,12 +170,13 @@ module Rpc_of = struct
       | Ptype_record labels, _ ->
         let fields =
           labels |> List.mapi (fun i { pld_name = { txt = name }; pld_type; pld_attributes } ->
+              let rpc_name = attr_key name pld_attributes in
               if is_option pld_type
               then
                 [%expr let rpc = [%e (expr_of_typ quoter pld_type)] [%e Exp.field (evar "x") (mknoloc (Lident name))] in
-                       match rpc with | Rpc.Enum [x] -> Some ([%e str name], x) | Rpc.Enum [] -> None]
+                       match rpc with | Rpc.Enum [x] -> Some ([%e str rpc_name], x) | Rpc.Enum [] -> None]
               else
-                [%expr Some ([%e str name],
+                [%expr Some ([%e str rpc_name],
                              [%e (expr_of_typ quoter pld_type)] [%e Exp.field (evar "x") (mknoloc (Lident name))])]) in
         
         [%expr fun x -> Rpc.Dict (List.fold_right (fun x acc -> match x with | Some x -> x::acc | None -> acc) [%e list fields] []) ]

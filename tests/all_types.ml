@@ -31,9 +31,9 @@ type 'a x = {
   f2: (string * string list) array;
   f3: int32;
   f4: int64;
-  f5: int;
+  f5: int [@key "type"];
   f6: (unit * char) list;
-  f7: 'a list;
+  f7: 'a list [@key "let"];
   f8: t list;
   f9: int option;
   progress: int array;
