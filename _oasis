@@ -16,7 +16,7 @@ Library rpc
   Path: lib
   Findlibname: rpclib
   Modules: Rpc, Xmlrpc, Jsonrpc, Rpc_client
-  BuildDepends:	xmlm
+  BuildDepends:	xmlm, result
 
 Library ppx_deriving_rpc
   Path: ppx

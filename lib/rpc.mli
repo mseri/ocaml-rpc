@@ -28,35 +28,37 @@ type t =
   | Dict of (string * t) list
   | Null
 
+type 'a error_or = ('a, string) Result.result
+
 val to_string : t -> string
 
 (** {2 Basic constructors} *)
 
-val int64_of_rpc : t -> int64
+val int64_of_rpc : t -> int64 error_or
 val rpc_of_int64 : int64 -> t
 
-val int32_of_rpc : t -> int32
+val int32_of_rpc : t -> int32 error_or
 val rpc_of_int32 : int32 -> t
 
-val int_of_rpc : t -> int
+val int_of_rpc : t -> int error_or
 val rpc_of_int : int -> t
 
-val bool_of_rpc : t -> bool
+val bool_of_rpc : t -> bool error_or
 val rpc_of_bool : bool -> t
 
-val float_of_rpc : t -> float
+val float_of_rpc : t -> float error_or
 val rpc_of_float : float -> t
 
-val string_of_rpc : t -> string
+val string_of_rpc : t -> string error_or
 val rpc_of_string : string -> t
 
-val dateTime_of_rpc : t -> string
+val dateTime_of_rpc : t -> string error_or
 val rpc_of_dateTime : string -> t
 
 val t_of_rpc : t -> t
 val rpc_of_t : t -> t
 
-val unit_of_rpc : t -> unit
+val unit_of_rpc : t -> unit error_or
 val rpc_of_unit : unit -> t
 
 (** {2 Calls} *)
