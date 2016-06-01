@@ -30,6 +30,11 @@ type t =
 
 type 'a error_or = ('a, string) Result.result
 
+val bind : 'a error_or -> ('a -> 'b error_or) -> 'b error_or
+val return : 'a -> 'a error_or
+val (>>=) : 'a error_or -> ('a -> 'b error_or) -> 'b error_or
+val map_bind : ('a -> 'b error_or) -> 'b list -> 'a list -> ('b list) error_or
+
 val to_string : t -> string
 
 (** {2 Basic constructors} *)

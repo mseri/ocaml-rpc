@@ -33,6 +33,17 @@ type t =
 
 type 'a error_or = ('a, string) Result.result
 
+let bind m f =
+  match m with
+  | Result.Ok x -> f x
+  | Result.Error y -> Result.Error y
+let return x = Result.Ok x
+let (>>=) = bind
+let rec map_bind f acc xs =
+  match xs with
+  | x :: xs -> f x >>= fun x -> map_bind f (x :: acc) xs
+  | [] -> Result.Ok (List.rev acc)
+
 exception Runtime_error of string * t
 exception Runtime_exception of string * string
 

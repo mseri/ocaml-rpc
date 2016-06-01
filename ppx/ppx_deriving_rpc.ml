@@ -24,25 +24,32 @@ let attr_string name default attrs =
 
 let attr_key  = attr_string "key"
 
+let wrap_runtime decls =
+  [%expr let open! Rpc in [%e decls]]
+
 module Of_rpc = struct
-  
-  let rec expr_of_typ quoter typ =
+
+  let rec of_typ_fold quoter f typs =
+    typs |>
+    List.mapi (fun i typ -> i, app (expr_of_typ quoter typ) [evar (argn i)]) |>
+    List.fold_left (fun x (i, y) ->
+        [%expr [%e y] >>= fun [%p pvar (argn i)] -> [%e x]])
+      [%expr return [%e f (List.mapi (fun i _ -> evar (argn i)) typs)]]
+  and expr_of_typ quoter typ =
     match typ with
     | { ptyp_desc = Ptyp_constr ( { txt = lid }, args ) } when
         List.mem lid core_types ->
-      [%expr Rpc.([%e Exp.ident (mknoloc (Ppx_deriving.mangle_lid (`Suffix "of_rpc") lid))])]
+      [%expr [%e Exp.ident (mknoloc (Ppx_deriving.mangle_lid (`Suffix "of_rpc") lid))] ]
     | { ptyp_desc = Ptyp_constr ( { txt = Lident "char" }, args ) } ->
-      [%expr Rpc.(function | Rpc.Int x -> Char.chr (Int64.to_int x) | Rpc.String s -> Char.chr (int_of_string s))]
-    | [%type: [%t? typ] list] -> [%expr function | Rpc.Enum l -> List.map [%e expr_of_typ quoter typ] l | _ -> failwith "boo" ]
-    | [%type: [%t? typ] array] -> [%expr function | Rpc.Enum l -> Array.of_list (List.map [%e expr_of_typ quoter typ] l) | _ -> failwith "boo" ]
+      [%expr function | Int x -> return (Char.chr (Int64.to_int x)) | String s -> return (Char.chr (int_of_string s))]
+    | [%type: [%t? typ] list] -> [%expr function | Rpc.Enum l -> map_bind [%e expr_of_typ quoter typ] [] l | _ -> failwith "boo" ]
+    | [%type: [%t? typ] array] -> [%expr function | Rpc.Enum l -> map_bind [%e expr_of_typ quoter typ] [] l >>= fun x -> return (Array.of_list x) | _ -> failwith "boo" ]
     | {ptyp_desc = Ptyp_tuple typs } ->
       let pattern = List.mapi (fun i _ -> pvar (argn i)) typs in
-      [%expr fun (Rpc.Enum [%p plist pattern]) -> [%e tuple (List.mapi (fun i typ ->
-                    let e = expr_of_typ quoter typ in
-                    [%expr [%e e] [%e Exp.ident (lid (argn i))]]) typs)]]
+      [%expr fun (Rpc.Enum [%p plist pattern]) -> [%e of_typ_fold quoter tuple typs]]
     | [%type: [%t? typ] option] ->
       let e = expr_of_typ quoter typ in
-      [%expr fun x -> match x with Rpc.Enum [] -> None | Rpc.Enum [y] -> Some ([%e e] y) ]
+      [%expr fun x -> match x with Rpc.Enum [] -> return None | Rpc.Enum [y] -> [%e e] y >>= fun z -> return (Some z) ]
     | { ptyp_desc = Ptyp_constr ( { txt = lid }, args ) } ->
       let args = List.map (expr_of_typ quoter) args in
       let f = Exp.ident (mknoloc (Ppx_deriving.mangle_lid (`Suffix "of_rpc") lid)) in
@@ -70,29 +77,42 @@ module Of_rpc = struct
 
   let str_of_type ~options ~path type_decl =
     let quoter = Ppx_deriving.create_quoter () in
-    let path = Ppx_deriving.path_of_type_decl ~path type_decl in
     let to_rpc =
       match type_decl.ptype_kind, type_decl.ptype_manifest with
       | Ptype_abstract, Some manifest ->
         expr_of_typ quoter manifest
       | Ptype_record labels, _ ->
-        let fields =
-          labels |> List.mapi (fun i { pld_name = { txt = name }; pld_type; pld_attributes } ->
-              let rpc_name = attr_key name pld_attributes in
-              let field =
-                if is_option pld_type
-                then
-                  [%expr (if List.mem_assoc [%e str rpc_name] dict
-                          then
-                            [%e expr_of_typ quoter pld_type]
-                              (Rpc.Enum [(List.assoc [%e str rpc_name] dict)])
-                          else None)]
-                else
-                  [%expr [%e expr_of_typ quoter pld_type]
-                           (List.assoc [%e str rpc_name] dict)]
-              in name,field)
+        let record =
+          List.fold_left (fun expr i ->
+              [%expr [%e evar (argn i)] >>= fun [%p pvar (argn i)] -> [%e expr]])
+            [%expr return [%e Exp.record (labels |> List.mapi (fun i { pld_name = { txt = name } } ->
+                          mknoloc (Lident name), evar (argn i))) None]]
+            (labels |> List.mapi (fun i _ -> i)) in
+        let wrap_opt pld_type x =
+          if is_option pld_type then [%expr (Rpc.Enum [[%e x]])] else x in
+        let cases =
+          (labels |> List.mapi (fun i { pld_name = { txt = name }; pld_type; pld_attributes } ->
+               let path = path @ [name] in
+               let thunks = labels |> List.mapi (fun j _ ->
+                   if i = j
+                   then app (expr_of_typ quoter pld_type) [(wrap_opt pld_type (evar "x"))]
+                   else evar (argn j)) in
+               Exp.case [%pat? ([%p pstr (attr_key name pld_attributes)], x) :: xs]
+                 [%expr loop xs [%e tuple thunks]])) @
+          [Exp.case [%pat? []] record;
+           Exp.case [%pat? _ :: xs] [%expr loop xs _state]]
+        and thunks =
+          labels |> List.map (fun { pld_name = { txt = name }; pld_type; pld_attributes } ->
+              if is_option pld_type then [%expr return None] else [%expr Error "undefined"])
         in
-        [%expr fun x -> match x with | Rpc.Dict dict -> [%e record fields] | _ -> failwith "expecting dict"]
+        [%expr fun x ->
+               match x with
+               | Rpc.Dict dict ->
+                 let rec loop xs ([%p ptuple (List.mapi (fun i _ -> pvar (argn i)) labels)] as _state) =
+                   [%e Exp.match_ [%expr xs] cases]
+                 in loop dict [%e tuple thunks]
+               | _ ->
+                 failwith "expecting dict"]
       | Ptype_abstract, None ->
         failwith "Unhandled"
       | Ptype_open, _ ->
@@ -102,13 +122,12 @@ module Of_rpc = struct
           constrs |> List.map (fun { pcd_name = { txt = name }; pcd_args; pcd_attributes } ->
               match pcd_args with
               | typs ->
-                let args = List.mapi (fun i typ -> [%expr [%e expr_of_typ quoter typ] [%e evar (argn i)]]) typs in
                 let subpattern = List.mapi (fun i _ -> pvar (argn i)) typs |> plist in
-                let rpc_of = constr name args in
+                let rpc_of = of_typ_fold quoter (fun x -> constr name x) pcd_args in
                 let main = [%pat? Rpc.String [%p pstr name]] in
-                let pattern = match args with
+                let pattern = match pcd_args with
                   | [] -> main
-                  | args -> [%pat? Rpc.Enum ([%p main] :: [%p subpattern])]
+                  | _ -> [%pat? Rpc.Enum ([%p main] :: [%p subpattern])]
                 in
                   Exp.case pattern rpc_of)
         in
@@ -208,8 +227,8 @@ end
 let strs_of_type ~options ~path type_decl =
   let polymorphize = Ppx_deriving.poly_fun_of_type_decl type_decl in
   [
-    Vb.mk (pvar (Ppx_deriving.mangle_type_decl (`Prefix "rpc_of") type_decl)) (polymorphize (Rpc_of.str_of_type ~options ~path type_decl));
-    Vb.mk (pvar (Ppx_deriving.mangle_type_decl (`Suffix "of_rpc") type_decl)) (polymorphize (Of_rpc.str_of_type ~options ~path type_decl));
+    Vb.mk (pvar (Ppx_deriving.mangle_type_decl (`Prefix "rpc_of") type_decl)) (polymorphize (wrap_runtime (Rpc_of.str_of_type ~options ~path type_decl)));
+    Vb.mk (pvar (Ppx_deriving.mangle_type_decl (`Suffix "of_rpc") type_decl)) (polymorphize (wrap_runtime (Of_rpc.str_of_type ~options ~path type_decl)));
   ]
 
 
