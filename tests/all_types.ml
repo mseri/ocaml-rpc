@@ -62,6 +62,7 @@ let string_of_file fname =
 
 
 let _ =
+  let open Rpc in
   let x = {
     foo= Foo 3;
     bar= "ha          ha";
@@ -98,16 +99,18 @@ let _ =
 
   let x_of_rpc = x_of_rpc M.m_of_rpc in
 
-  let x_xml = x_of_rpc (Xmlrpc.of_string ~callback rpc_xml) in
-  let x_json = x_of_rpc (Jsonrpc.of_string rpc_json) in
+  x_of_rpc (Xmlrpc.of_string ~callback rpc_xml) >>= fun x_xml ->
+  x_of_rpc (Jsonrpc.of_string rpc_json) >>= fun x_json ->
 
   Printf.printf "\n==Sanity check 1==\nx=x_xml: %b\nx=x_json: %b\n" (x = x_xml) (x = x_json);
   assert (x = x_xml && x = x_json);
 
+  let get_ok = function | Result.Ok x -> x | Result.Error y -> failwith y in
+
   if file_exists "x.reference.xml" && file_exists "x.reference.json" then begin
     Printf.printf "\n==Backwards compatibility check==\n";
-    let x_old_xml = string_of_file "x.reference.xml" |> Xmlrpc.of_string |> x_of_rpc in
-    let x_old_json = string_of_file "x.reference.json" |> Jsonrpc.of_string |> x_of_rpc in
+    let x_old_xml = string_of_file "x.reference.xml" |> Xmlrpc.of_string |> x_of_rpc |> get_ok in
+    let x_old_json = string_of_file "x.reference.json" |> Jsonrpc.of_string |> x_of_rpc |> get_ok in
     assert (x=x_old_xml && x=x_old_json);
   end;
   
@@ -133,12 +136,12 @@ let _ =
   let s_xml = Xmlrpc.response_of_string s_xml_str in
   let f_xml = Xmlrpc.response_of_string f_xml_str in
 
-  let c1 = x_of_rpc (List.hd call.Rpc.params) in
-  let c2 = x_of_rpc (List.hd c_xml.Rpc.params) in
-  let s1 = x_of_rpc success.Rpc.contents in
-  let s2 = x_of_rpc s_xml.Rpc.contents in
-  let f1 = x_of_rpc failure.Rpc.contents in
-  let f2 = x_of_rpc f_xml.Rpc.contents in
+  let c1 = x_of_rpc (List.hd call.Rpc.params) |> get_ok in
+  let c2 = x_of_rpc (List.hd c_xml.Rpc.params) |> get_ok in
+  let s1 = x_of_rpc success.Rpc.contents |> get_ok in
+  let s2 = x_of_rpc s_xml.Rpc.contents |> get_ok in
+  let f1 = x_of_rpc failure.Rpc.contents |> get_ok in
+  let f2 = x_of_rpc f_xml.Rpc.contents |> get_ok in
 
   Printf.printf "\n==Sanity check 2==\nc1=c2: %b\ns1=s2: %b\nf1=f2: %b\n"
     (c1 = c2) (s1 = s2) (f1 = f2);
@@ -150,4 +153,6 @@ let _ =
 
   Printf.printf "\n==Sanity check 3==\ncall=c_json': %b\nsuccess=s_json': %b\nfailure=f_json': %b\n"
     (call = c_json) (success = s_json) (failure = f_json);
-  assert (call = c_json && success = s_json && failure = f_json)
+  assert (call = c_json && success = s_json && failure = f_json);
+  Result.Ok ()
+    

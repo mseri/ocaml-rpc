@@ -2,15 +2,15 @@ OCAMLC = ocamlfind ocamlc
 OCAMLOPT = ocamlfind ocamlopt
 OCAMLFLAGS = -annot -g
 
-PACKS = rpclib,lwt,lwt.unix
+PACKS = rpclib,lwt,lwt.unix,result
 EXAMPLES = \
 	all_types \
 	xapi \
 	json \
 	option \
 	encoding \
-	dict 
-#	variants 
+	dict \
+	variants 
 #	client \
 #	client_lwt \
 #	phantom

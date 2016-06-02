@@ -6,17 +6,21 @@ type t = {
 } [@@deriving rpc]
 
 let _ =
+  let open Rpc in
+
   let t1 = { foo = None; bar = None; gni = []; gna = 1, None } in
   let t2 = { foo = None; bar = Some []; gni = [1]; gna = 1, None } in
   let r1 = rpc_of t1 in
   let r2 = rpc_of t2 in
   Printf.printf "r1 = %s\nr2 = %s\n" (Rpc.to_string r1) (Rpc.to_string r2);
 
-  let t1' = of_rpc r1 in
-  let t2' = of_rpc r2 in
+  of_rpc r1 >>= fun t1' -> 
+  of_rpc r2 >>= fun t2' ->
 
   Printf.printf "t1 = t1' : %b\n%!" (t1=t1');
   assert (t1 = t1');
 
   Printf.printf "t2 = t2' : %b\n%!" (t2 = t2');
-  assert (t2 = t2')
+  assert (t2 = t2');
+
+  return ()
