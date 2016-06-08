@@ -1,1 +1,5 @@
 PKG ppx_deriving ppx_tools rpclib ppx_tools.metaquot result
+S lib
+S tests
+B _build/lib
+

@@ -43,6 +43,7 @@ let rec map_bind f acc xs =
   match xs with
   | x :: xs -> f x >>= fun x -> map_bind f (x :: acc) xs
   | [] -> Result.Ok (List.rev acc)
+let lift f x = return (f x)
 
 exception Runtime_error of string * t
 exception Runtime_exception of string * string
@@ -134,3 +135,6 @@ let string_of_response response =
 
 let success v = { success = true; contents = v }
 let failure v = { success = false; contents = v }
+
+
+      

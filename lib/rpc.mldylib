@@ -1,7 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: d79fd12494b892a0c54925fc7397b3b8)
+# DO NOT EDIT (digest: 9780092fbd44482772ecb627a52dc570)
 Rpc
 Xmlrpc
 Jsonrpc
 Rpc_client
+Types
+Idl
 # OASIS_STOP

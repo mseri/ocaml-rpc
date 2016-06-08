@@ -15,7 +15,7 @@ Flag js
 Library rpc
   Path: lib
   Findlibname: rpclib
-  Modules: Rpc, Xmlrpc, Jsonrpc, Rpc_client
+  Modules: Rpc, Xmlrpc, Jsonrpc, Rpc_client, Types, Idl
   BuildDepends:	xmlm, result
 
 Library ppx_deriving_rpc

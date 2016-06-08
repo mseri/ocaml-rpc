@@ -102,3 +102,5 @@ val lowerfn : t -> t
  *  [Rpc.t] which contains all key-value pairs from [rpc1], as well as all
  *  key-value pairs from [rpc2] for which the key does not exist in [rpc1]. *)
 val struct_extend : t -> t -> t
+
+
