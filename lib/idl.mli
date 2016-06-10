@@ -9,7 +9,18 @@ module Param : sig
   val mk : ?name:string -> ?description:string -> 'a Types.def -> 'a t
 end
 
+module Interface : sig
+  type description = {
+    name : string;
+    description : string;
+    version : int;
+  }
+end
+
 module type RPC = sig
+  type description
+  val describe : Interface.description -> description
+
   type 'a res
   type 'a comp
   type _ fn
@@ -19,6 +30,9 @@ module type RPC = sig
 end
 
 module GenClient : sig
+  type description = Interface.description
+  val describe : Interface.description -> description
+
   type 'a res = (Rpc.call -> Rpc.response Rpc.error_or) -> 'a
   type 'a comp = 'a Rpc.error_or
   type _ fn
@@ -28,6 +42,9 @@ module GenClient : sig
 end
 
 module GenServer : sig
+  type description = Interface.description
+  val describe : Interface.description -> description
+
   type funcs = (string, Rpc.call -> Rpc.response Rpc.error_or) Hashtbl.t
   type 'a res = 'a -> funcs -> unit
   type 'a comp = 'a

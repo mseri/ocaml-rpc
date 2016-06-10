@@ -18,14 +18,12 @@ type boxed_fn =
   | BoxedFunction : 'a Method.t -> boxed_fn
     
 module Interface = struct
+
   type t = {
-    name : string;
-    description : string;
+    details : Idl.Interface.description;
     methods : boxed_fn list;
   }
   
-  let empty name description = { name; description; methods=[]; }                                       
-                               
   let prepend_arg : t -> 'a Idl.Param.t -> t = fun interface param ->
     let prepend : type b. b fn -> ('a -> b) fn = fun arg ->
       Function (param, arg)
@@ -35,6 +33,11 @@ module Interface = struct
          interface.methods}
 end
 
+type description = Interface.t
+
+let describe i = Interface.({details=i; methods=[]})
+
+  
 type typedefs =
   | BoxedTypedef : 'a Types.def -> typedefs
     
@@ -256,10 +259,10 @@ let skeleton_method unimplemented i (BoxedFunction m) =
   [
     Line (sprintf "def %s(self%s):" m.Method.name (String.concat "" (List.map (fun x -> ", " ^ x) (List.map (fun (Idl.Param.Boxed x) -> x.Idl.Param.name) inputs))));
     Block ([
-        Line (sprintf "\"\"\"%s\"\"\"" i.Interface.description);
+        Line (sprintf "\"\"\"%s\"\"\"" i.Interface.details.Idl.Interface.description);
       ] @ (
           if unimplemented
-          then [ Line (sprintf "raise Unimplemented(\"%s.%s\")" i.Interface.name m.Method.name) ]
+          then [ Line (sprintf "raise Unimplemented(\"%s.%s\")" i.Interface.details.Idl.Interface.name m.Method.name) ]
           else ([
               Line "result = {}";
             ] @ (
@@ -281,7 +284,7 @@ let example_stub_user i m =
     Line "if __name__ == \"__main__\":";
     Block [
       Line "c = xapi.connect()";
-      Line (Printf.sprintf "results = c.%s.%s({ %s })" i.Interface.name m.Method.name
+      Line (Printf.sprintf "results = c.%s.%s({ %s })" i.Interface.details.Idl.Interface.name m.Method.name
               (String.concat ", " (List.map (fun (Idl.Param.Boxed a) -> sprintf "%s: %s" a.Idl.Param.name (value_of a.Idl.Param.typedef.Types.ty)) (find_inputs m.Method.ty))));
       Line "print (repr(results))"
     ]
@@ -295,7 +298,7 @@ let example_skeleton_user i m =
     Line "import xapi";
     Line "from storage import *";
     Line "";
-    Line (sprintf "class %s_myimplementation(%s_skeleton):" i.Interface.name i.Interface.name);
+    Line (sprintf "class %s_myimplementation(%s_skeleton):" i.Interface.details.Idl.Interface.name i.Interface.details.Idl.Interface.name);
     Block ([
         Line "# by default each method will return a Not_implemented error";
         Line "# ..."
@@ -308,9 +311,9 @@ let example_skeleton_user i m =
 let rec skeleton_of_interface unimplemented suffix i =
   let open Printf in
   [
-    Line (sprintf "class %s_%s:" i.Interface.name suffix);
+    Line (sprintf "class %s_%s:" i.Interface.details.Idl.Interface.name suffix);
     Block ([
-        Line (sprintf "\"\"\"%s\"\"\"" i.Interface.description);
+        Line (sprintf "\"\"\"%s\"\"\"" i.Interface.details.Idl.Interface.description);
         Line "def __init__(self):";
         Block [
           Line "pass";
@@ -356,16 +359,16 @@ let server_of_interface i =
           ])
     ] in    
   let dispatch_method first (BoxedFunction m) =
-    [ Line (sprintf "%sif method == \"%s.%s\":" (if first then "" else "el") i.Interface.name m.Method.name);
+    [ Line (sprintf "%sif method == \"%s.%s\":" (if first then "" else "el") i.Interface.details.Idl.Interface.name m.Method.name);
       Block [ Line (sprintf "return success(self.%s(args))" m.Method.name) ]
     ] in
   let first_is_special f xs = match xs with
     | [] -> []
     | x :: xs -> f true x :: (List.map (f false) xs) in
   [
-    Line (sprintf "class %s_server_dispatcher:" i.Interface.name);
+    Line (sprintf "class %s_server_dispatcher:" i.Interface.details.Idl.Interface.name);
     Block ([
-        Line (sprintf "\"\"\"%s\"\"\"" i.Interface.description);
+        Line (sprintf "\"\"\"%s\"\"\"" i.Interface.details.Idl.Interface.description);
         Line "def __init__(self, impl):";
         Block [
           Line "\"\"\"impl is a proxy object whose methods contain the implementation\"\"\"";
@@ -389,7 +392,7 @@ let test_impl_of_interfaces i =
       Line "\"\"\"Create a server which will respond to all calls, returning arbitrary values. This is intended as a marshal/unmarshal test.\"\"\"";
       Line "def __init__(self):";
       Block [
-        Line (sprintf "%s_server_dispatcher.__init__(self%s)" i.Interfaces.name (String.concat "" (List.map (fun i -> ", " ^ i.Interface.name ^ "_server_dispatcher(" ^ i.Interface.name ^ "_test())") i.Interfaces.interfaces)))
+        Line (sprintf "%s_server_dispatcher.__init__(self%s)" i.Interfaces.name (String.concat "" (List.map (fun i -> ", " ^ i.Interface.details.Idl.Interface.name ^ "_server_dispatcher(" ^ i.Interface.details.Idl.Interface.name ^ "_test())") i.Interfaces.interfaces)))
       ]
     ]
   ]
@@ -455,13 +458,13 @@ let commandline_of_interface i =
   [
     Line "import argparse, traceback";
     Line "import xapi";
-    Line (sprintf "class %s_commandline():" i.Interface.name);
+    Line (sprintf "class %s_commandline():" i.Interface.details.Idl.Interface.name);
     Block ([
       Line "\"\"\"Parse command-line arguments and call an implementation.\"\"\"";
       Line "def __init__(self, impl):";
       Block [
         Line "self.impl = impl";
-        Line (sprintf "self.dispatcher = %s_server_dispatcher(self.impl)" i.Interface.name);
+        Line (sprintf "self.dispatcher = %s_server_dispatcher(self.impl)" i.Interface.details.Idl.Interface.name);
       ];
    ] @ (List.concat (List.map (commandline_parse i) i.Interface.methods)) @ (
         List.concat (List.map (commandline_run i) i.Interface.methods))
@@ -483,8 +486,8 @@ let of_interfaces i =
     Line (sprintf "class %s_server_dispatcher:" i.Interfaces.name);
     Block ([
         Line "\"\"\"Demux calls to individual interface server_dispatchers\"\"\"";
-        Line (sprintf "def __init__(self%s):" (String.concat "" (List.map (fun x -> ", " ^ x ^ " = None") (List.map (fun i -> i.Interface.name) i.Interfaces.interfaces))));
-        Block (List.map (fun i -> Line (sprintf "self.%s = %s" i.Interface.name i.Interface.name)) i.Interfaces.interfaces);
+        Line (sprintf "def __init__(self%s):" (String.concat "" (List.map (fun x -> ", " ^ x ^ " = None") (List.map (fun i -> i.Interface.details.Idl.Interface.name) i.Interfaces.interfaces))));
+        Block (List.map (fun i -> Line (sprintf "self.%s = %s" i.Interface.details.Idl.Interface.name i.Interface.details.Idl.Interface.name)) i.Interfaces.interfaces);
         Line "def _dispatch(self, method, params):";
         Block [
           Line "try:";
@@ -492,8 +495,8 @@ let of_interfaces i =
               Line "log(\"method = %s params = %s\" % (method, repr(params)))";
             ] @ (
                 List.fold_left (fun (first, acc) i -> false, acc @ [
-                    Line (sprintf "%sif method.startswith(\"%s\") and self.%s:" (if first then "" else "el") i.Interface.name i.Interface.name);
-                    Block [ Line (sprintf "return self.%s._dispatch(method, params)" i.Interface.name) ];
+                    Line (sprintf "%sif method.startswith(\"%s\") and self.%s:" (if first then "" else "el") i.Interface.details.Idl.Interface.name i.Interface.details.Idl.Interface.name);
+                    Block [ Line (sprintf "return self.%s._dispatch(method, params)" i.Interface.details.Idl.Interface.name) ];
                   ]) (true, []) i.Interfaces.interfaces |> snd
               ) @ [
                 Line "raise UnknownMethod(method)"

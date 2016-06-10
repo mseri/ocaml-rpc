@@ -14,12 +14,23 @@ module Param = struct
 
 end
 
+module Interface = struct 
+  type description = {
+    name : string;
+    description : string;
+    version : int;
+  }
+end
 
 
 module type RPC = sig
+  type description
   type 'a res
   type 'a comp
   type _ fn
+
+  val describe : Interface.description -> description
+
   val (@->) : 'a Param.t -> 'b fn -> ('a -> 'b) fn
   val returning : 'a Param.t -> 'a comp fn
   val declare : string -> string -> 'a fn -> 'a res
@@ -33,9 +44,13 @@ let debug_rpc call =
   response
 
 module GenClient = struct
+  type description = Interface.description
+  let describe x = x
+
   type 'a comp = 'a Rpc.error_or
   type rpcfn = Rpc.call -> Rpc.response Rpc.error_or
   type 'a res = rpcfn -> 'a
+    
   type _ fn =
     | Function : 'a Param.t * 'b fn -> ('a -> 'b) fn
     | Returning : 'a Param.t -> 'a comp fn
@@ -58,11 +73,14 @@ end
 module GenServer = struct
   open Rpc
 
+  type description = Interface.description
+  let describe x = x
+      
   type 'a comp = 'a
   type rpcfn = Rpc.call -> Rpc.response Rpc.error_or
   type funcs = (string, rpcfn) Hashtbl.t
   type 'a res = 'a -> funcs -> unit
-
+    
   type _ fn =
     | Function : 'a Param.t * 'b fn -> ('a -> 'b) fn
     | Returning : 'a Param.t -> 'a comp fn
