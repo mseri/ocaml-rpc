@@ -1,9 +1,10 @@
 # OASIS_START
-# DO NOT EDIT (digest: 9780092fbd44482772ecb627a52dc570)
+# DO NOT EDIT (digest: 2754c27d42f725ec939bcb7abe5b9883)
 Rpc
 Xmlrpc
 Jsonrpc
 Rpc_client
 Types
 Idl
+Pythongen
 # OASIS_STOP

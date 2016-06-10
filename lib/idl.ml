@@ -1,14 +1,27 @@
-type 'a param = {
-  param_name : bytes;
-  param_def : 'a Types.def;
-}
+module Param = struct
+  type 'a t = {
+    name : bytes;
+    description : bytes;
+    typedef : 'a Types.def;
+  }
+
+  type boxed = Boxed : 'a t -> boxed
+
+  let mk ?name ?description typedef =
+    let name = match name with Some n -> n | None -> typedef.Types.name in
+    let description = match description with Some d -> d | None -> typedef.Types.description in
+    {name; description; typedef}
+
+end
+
+
 
 module type RPC = sig
   type 'a res
   type 'a comp
   type _ fn
-  val (@->) : 'a param -> 'b fn -> ('a -> 'b) fn
-  val returning : 'a param -> 'a comp fn
+  val (@->) : 'a Param.t -> 'b fn -> ('a -> 'b) fn
+  val returning : 'a Param.t -> 'a comp fn
   val declare : string -> string -> 'a fn -> 'a res
 end
 
@@ -24,8 +37,8 @@ module GenClient = struct
   type rpcfn = Rpc.call -> Rpc.response Rpc.error_or
   type 'a res = rpcfn -> 'a
   type _ fn =
-    | Function : 'a param * 'b fn -> ('a -> 'b) fn
-    | Returning : 'a param -> 'a comp fn
+    | Function : 'a Param.t * 'b fn -> ('a -> 'b) fn
+    | Returning : 'a Param.t -> 'a comp fn
 
   let returning a = Returning a
   let (@->) = fun t f -> Function (t, f)
@@ -34,11 +47,11 @@ module GenClient = struct
     let rec inner : type b. (string * Rpc.t) list -> b fn -> b = fun cur ->
       function
       | Function (t, f) ->
-        fun v -> inner ((t.param_name, Types.marshal t.param_def.Types.ty v) :: cur) f
+        fun v -> inner ((t.Param.name, Types.marshal t.Param.typedef.Types.ty v) :: cur) f
       | Returning t ->
         let call = Rpc.call name [(Rpc.Dict cur)] in
         Rpc.bind (rpc call) (fun response ->
-        Types.unmarshal t.param_def.Types.ty response.Rpc.contents)
+        Types.unmarshal t.Param.typedef.Types.ty response.Rpc.contents)
     in inner [] ty   
 end
 
@@ -51,8 +64,8 @@ module GenServer = struct
   type 'a res = 'a -> funcs -> unit
 
   type _ fn =
-    | Function : 'a param * 'b fn -> ('a -> 'b) fn
-    | Returning : 'a param -> 'a comp fn
+    | Function : 'a Param.t * 'b fn -> ('a -> 'b) fn
+    | Returning : 'a Param.t -> 'a comp fn
         
   let returning a = Returning a
   let (@->) = fun t f -> Function (t, f)
@@ -75,11 +88,11 @@ module GenServer = struct
         get_named_args call >>= fun args ->
         match f with
         | Function (t, f) ->
-          get_arg args t.param_name >>= fun arg_rpc ->
-          Types.unmarshal t.param_def.Types.ty arg_rpc >>= fun arg ->
+          get_arg args t.Param.name >>= fun arg_rpc ->
+          Types.unmarshal t.Param.typedef.Types.ty arg_rpc >>= fun arg ->
           inner f (impl arg) call
         | Returning t ->
-          Result.Ok (success (Types.marshal t.param_def.Types.ty impl))
+          Result.Ok (success (Types.marshal t.Param.typedef.Types.ty impl))
       in inner ty impl
     in
 

@@ -1,5 +1,3 @@
-
-
 (* Basic type definitions *)
 
 type _ basic =
@@ -47,16 +45,6 @@ and 'a variant = {
   mutable variants : 'a boxed_tag list
 }
 and 'a variant_value = { tag : string; contents: Rpc.t }
-
-(*let structure sname = Struct { sname; fields=[] }
-let field : type t a. t structure_value typ -> string -> string -> a typ -> (a, t) field =
-  fun structure fname fdescription field ->
-    match structure with
-    | Struct ({ sname; fields } as s) ->
-      let field = { fname; fdescription; field } in
-      s.fields <- (BoxedField field) :: s.fields;
-      field
-    | _ -> failwith "Unsupported"*)
 
 let int    = { name="int";    ty=Basic Int;    description="Native integer" }
 let int32  = { name="int32";  ty=Basic Int32;  description="32-bit integer"}
