@@ -1,91 +1,5 @@
 (* Python generator *)
-
-type 'a comp = 'a
-  
-type _ fn =
-  | Function : 'a Idl.Param.t * 'b fn -> ('a -> 'b) fn
-  | Returning : 'a Idl.Param.t -> 'a comp fn
-      
-module Method = struct
-  type 'a t = {
-    name : string;
-    description : string;
-    ty : 'a fn
-  }
-end
-
-type boxed_fn =
-  | BoxedFunction : 'a Method.t -> boxed_fn
-    
-module Interface = struct
-
-  type t = {
-    details : Idl.Interface.description;
-    methods : boxed_fn list;
-  }
-  
-  let prepend_arg : t -> 'a Idl.Param.t -> t = fun interface param ->
-    let prepend : type b. b fn -> ('a -> b) fn = fun arg ->
-      Function (param, arg)
-    in
-    {interface with methods = List.map (fun (BoxedFunction m) ->
-         BoxedFunction Method.({ name = m.name; description = m.description; ty = prepend m.ty}))
-         interface.methods}
-end
-
-type description = Interface.t
-
-let describe i = Interface.({details=i; methods=[]})
-
-  
-type typedefs =
-  | BoxedTypedef : 'a Types.def -> typedefs
-    
-let rec find_inputs : type a. a fn -> Idl.Param.boxed list = fun m ->
-  match m with
-  | Function (x,y) -> (Idl.Param.Boxed x) :: find_inputs y
-  | Returning _ -> []
-                   
-let rec find_output : type a. a fn -> Idl.Param.boxed = fun m ->
-  match m with
-  | Returning x -> Idl.Param.Boxed x
-  | Function (x,y) -> find_output y
-                        
-module Interfaces = struct
-  type t = {
-    name : string;
-    title : string;
-    description : string;
-    type_decls : typedefs list;
-    interfaces : Interface.t list;
-  }  
-  
-  let empty name title description =
-    { name; title; description; type_decls=[]; interfaces=[] }
-    
-  let add_interface is i =
-    let new_typedefs =
-      List.concat (List.map (fun (BoxedFunction m) ->
-          let inputs = find_inputs m.Method.ty in
-          let output = find_output m.Method.ty in
-          let defs = List.map (fun (Idl.Param.Boxed p) -> BoxedTypedef (p.Idl.Param.typedef)) (output::inputs) in
-          let new_types = List.filter
-              (fun def -> not (List.mem def is.type_decls)) defs in
-          new_types) i.Interface.methods)
-    in
-    { is with type_decls = new_typedefs @ is.type_decls; interfaces = i :: is.interfaces }
-    
-end
-
-type 'a res = Interface.t -> Interface.t
-                               
-let returning a = Returning a
-let (@->) = fun t f -> Function (t, f)
-    
-let declare name description ty interface =
-  let m = BoxedFunction Method.({name; description; ty}) in
-  Interface.({interface with methods = interface.methods @ [m]})
-
+open Codegen
 
 type t =
   | Block of t list
@@ -252,8 +166,8 @@ let exn_decl env e =
 *)
 
 let skeleton_method unimplemented i (BoxedFunction m) =
-  let inputs = find_inputs m.Method.ty in
-  let output = find_output m.Method.ty in
+  let inputs = Method.(find_inputs m.ty) in
+  let output = Method.(find_output m.ty) in
 
   let open Printf in
   [
@@ -273,7 +187,7 @@ let skeleton_method unimplemented i (BoxedFunction m) =
         ))
   ]
 
-let example_stub_user i m =
+let example_stub_user i (BoxedFunction m) =
   let open Printf in
   [
     Line "";
@@ -285,7 +199,7 @@ let example_stub_user i m =
     Block [
       Line "c = xapi.connect()";
       Line (Printf.sprintf "results = c.%s.%s({ %s })" i.Interface.details.Idl.Interface.name m.Method.name
-              (String.concat ", " (List.map (fun (Idl.Param.Boxed a) -> sprintf "%s: %s" a.Idl.Param.name (value_of a.Idl.Param.typedef.Types.ty)) (find_inputs m.Method.ty))));
+              (String.concat ", " (List.map (fun (Idl.Param.Boxed a) -> sprintf "%s: %s" a.Idl.Param.name (value_of a.Idl.Param.typedef.Types.ty)) Method.(find_inputs m.ty))));
       Line "print (repr(results))"
     ]
   ]
@@ -329,8 +243,8 @@ let skeleton_of_interface = skeleton_of_interface true "skeleton"
 let server_of_interface i =
   let open Printf in
   let typecheck_method_wrapper (BoxedFunction m) =
-    let inputs = find_inputs m.Method.ty in
-    let output = find_output m.Method.ty in
+    let inputs = Method.(find_inputs m.ty) in
+    let output = Method.(find_output m.ty) in
     let extract_input (Idl.Param.Boxed arg) =
       [ Line (sprintf "if not(args.has_key('%s')):" arg.Idl.Param.name);
         Block [ Line (sprintf "raise UnmarshalException('argument missing', '%s', '')" arg.Idl.Param.name) ];
@@ -399,8 +313,8 @@ let test_impl_of_interfaces i =
 
 let commandline_parse i (BoxedFunction m) =
   let open Printf in
-  let inputs = find_inputs m.Method.ty in
-  let output = find_output m.Method.ty in
+  let inputs = Method.(find_inputs m.ty) in
+  let output = Method.(find_output m.ty) in
   [
     Line (sprintf "def _parse_%s(self):" m.Method.name);
     Block ([

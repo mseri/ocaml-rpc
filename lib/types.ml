@@ -23,7 +23,9 @@ type _ typ =
 
 (* A type definition has a name and description *)
 and 'a def = { name: string; description: string; ty: 'a typ; }
-             
+
+and boxed_def = BoxedDef : 'a def -> boxed_def
+
 and 'a structure_value = { vfields : (string * Rpc.t) list }
 and ('a, 's) field = {
   fname : string;

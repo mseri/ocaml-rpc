@@ -15,8 +15,8 @@ Flag js
 Library rpc
   Path: lib
   Findlibname: rpclib
-  Modules: Rpc, Xmlrpc, Jsonrpc, Rpc_client, Types, Idl, Pythongen
-  BuildDepends:	xmlm, result
+  Modules: Rpc, Xmlrpc, Jsonrpc, Rpc_client, Types, Idl, Pythongen, Codegen, Htmlgen
+  BuildDepends:	xmlm, result, cow
 
 Library ppx_deriving_rpc
   Path: ppx

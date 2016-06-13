@@ -396,7 +396,7 @@ module TyDesc_of = struct
     let mytype = Ppx_deriving.core_type_of_type_decl type_decl in
     let polymorphize = Ppx_deriving.poly_fun_of_type_decl type_decl in
     let tydesc_of_lid = Ppx_deriving.mangle_type_decl (`Prefix "tydesc_of") type_decl in
-    let param_of_lid = Ppx_deriving.mangle_type_decl (`Prefix "p") type_decl in
+    let param_of_lid = Ppx_deriving.mangle_type_decl (`Suffix "def") type_decl in
     let tydesc_of =
       match type_decl.ptype_kind, type_decl.ptype_manifest with
       | Ptype_abstract, Some manifest ->
