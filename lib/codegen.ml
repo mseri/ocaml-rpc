@@ -54,7 +54,10 @@ end
 
 type description = Interface.t
 
-let describe i = Interface.({details=i; methods=[]})
+let describe i =
+  let n = i.Interface.name in
+  if String.capitalize n <> n then failwith "Interface names must be capitalized";
+  Interface.({details=i; methods=[]})
 
   
 module Interfaces = struct

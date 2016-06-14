@@ -249,7 +249,6 @@ let rec ocaml_of_t : type a. a typ -> string = function
           Printf.sprintf "| %s (%s) (** %s *)" t.vname (ocaml_of_t t.vcontents) t.vdescription) variants in
     String.concat " " tags
 
-
 type vm = {
   name_label : string;
   name_description : string;

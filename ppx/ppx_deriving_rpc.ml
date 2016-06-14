@@ -332,12 +332,14 @@ module Rpc_of = struct
 end
 
 
-module TyDesc_of = struct
+module Typ_of = struct
 
   (* Open the Rpc module *)
   let wrap_runtime decls =
     [%expr let open! Types in [%e decls]]
-    
+
+  let wrap_runtime decls =
+    [%expr let open! Types in [%e decls]]
   
   let rec expr_of_typ  typ =
     match typ with
@@ -356,7 +358,7 @@ module TyDesc_of = struct
     | [%type: [%t? typ] option] ->
       [%expr Option [%e expr_of_typ  typ]]
     | { ptyp_desc = Ptyp_constr ( { txt = lid }, args ) } ->
-      [%expr [%e Exp.ident (mknoloc (Ppx_deriving.mangle_lid (`Prefix "tydesc_of") lid))]]
+      [%expr [%e Exp.ident (mknoloc (Ppx_deriving.mangle_lid (`Prefix "typ_of") lid))]]
     | { ptyp_desc = Ptyp_variant (fields, _, _); ptyp_loc } ->
       let mk n t d = [%expr Types.BoxedTag ([%e record ["vname", n; "vcontents", t; "vdescription", d]])] in
       let cases =
@@ -397,12 +399,12 @@ module TyDesc_of = struct
     let name = type_decl.ptype_name.txt in
     let mytype = Ppx_deriving.core_type_of_type_decl type_decl in
     let polymorphize = Ppx_deriving.poly_fun_of_type_decl type_decl in
-    let tydesc_of_lid = Ppx_deriving.mangle_type_decl (`Prefix "tydesc_of") type_decl in
+    let typ_of_lid = Ppx_deriving.mangle_type_decl (`Prefix "typ_of") type_decl in
     let param_of_lid = Ppx_deriving.mangle_type_decl (`Suffix "def") type_decl in
-    let tydesc_of =
+    let typ_of =
       match type_decl.ptype_kind, type_decl.ptype_manifest with
       | Ptype_abstract, Some manifest ->
-        [ Vb.mk (pvar tydesc_of_lid) (polymorphize (wrap_runtime (expr_of_typ manifest)))]
+        [ Vb.mk (pvar typ_of_lid) (polymorphize (wrap_runtime (expr_of_typ manifest)))]
       | Ptype_record labels, _ ->
         let fields =
           labels |> List.map (fun { pld_name = { txt = fname }; pld_type; pld_attributes } ->
@@ -413,14 +415,14 @@ module TyDesc_of = struct
         let field_name_bindings = List.map (fun (fname, field_name, typ, record) ->
             Vb.mk (Pat.constraint_ (pvar field_name)
                      ([%type: (_, [%t mytype]) Types.field]))
-              record) fields in
+              (wrap_runtime record)) fields in
         let boxed_fields = list (List.map (fun (_,field_name,_,_) ->
             [%expr BoxedField ([%e Exp.ident (lid field_name)])]) fields) in
         field_name_bindings @ 
         [ Vb.mk (pvar name)
-            ( [%expr ({ fields=[%e boxed_fields ]; sname=[%e str name] }
+            ( wrap_runtime [%expr ({ fields=[%e boxed_fields ]; sname=[%e str name] }
                       : [%t mytype ] Types.structure) ] ) ] @
-        [ Vb.mk (pvar tydesc_of_lid)
+        [ Vb.mk (pvar typ_of_lid)
             (polymorphize
                (wrap_runtime
                   ([%expr Struct [%e Exp.ident (lid name) ]]))) ]
@@ -438,11 +440,11 @@ module TyDesc_of = struct
               in
               [%expr BoxedTag [%e record ["vname", str rpc_name; "vcontents", contents; "vdescription", str (attr_doc "" pcd_attributes)]]])
         in
-        [ Vb.mk (pvar tydesc_of_lid) (polymorphize (wrap_runtime ([%expr Variant ({ variants=([%e list cases]); } : [%t mytype ] variant) ]))) ]
+        [ Vb.mk (pvar typ_of_lid) (polymorphize (wrap_runtime ([%expr Variant ({ variants=([%e list cases]); } : [%t mytype ] variant) ]))) ]
     in
     let doc = attr_doc "" type_decl.ptype_attributes in
     let name = type_decl.ptype_name.txt in
-    tydesc_of @ [Vb.mk (pvar param_of_lid) (wrap_runtime (record ["name", str name; "description", str doc; "ty", Exp.ident (lid tydesc_of_lid)]))]
+    typ_of @ [Vb.mk (pvar param_of_lid) (wrap_runtime (record ["name", str name; "description", str doc; "ty", Exp.ident (lid typ_of_lid)]))]
 
 end
 
@@ -456,7 +458,7 @@ let strs_of_type ~options ~path type_decl =
       (polymorphize (wrap_runtime (Rpc_of.str_of_type ~options ~path type_decl)));
     Vb.mk (pvar of_rpc)
       (polymorphize (wrap_runtime (Of_rpc.str_of_type ~options ~path type_decl)));
-    ] @*) (TyDesc_of.str_of_type ~options ~path type_decl)
+    ] @*) (Typ_of.str_of_type ~options ~path type_decl)
 
 
 
