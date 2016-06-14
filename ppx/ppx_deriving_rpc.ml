@@ -345,6 +345,8 @@ module TyDesc_of = struct
         List.mem_assoc lid core_types -> List.assoc lid core_types
     | { ptyp_desc = Ptyp_constr ( { txt = Lident "char" }, args ) } ->
       [%expr Basic Char]
+    | [%type: (string * [%t? typ]) list] -> 
+      [%expr Dict (String, [%e expr_of_typ typ])]
     | [%type: [%t? typ] list] ->
       [%expr List [%e expr_of_typ  typ]]
     | [%type: [%t? typ] array] ->
@@ -446,7 +448,7 @@ end
 
 
 let strs_of_type ~options ~path type_decl =
-  let polymorphize = Ppx_deriving.poly_fun_of_type_decl type_decl in
+(*  let polymorphize = Ppx_deriving.poly_fun_of_type_decl type_decl in
   let rpc_of = Ppx_deriving.mangle_type_decl (`Prefix "rpc_of") type_decl in
   let of_rpc = Ppx_deriving.mangle_type_decl (`Suffix "of_rpc") type_decl in
   [
@@ -454,7 +456,7 @@ let strs_of_type ~options ~path type_decl =
       (polymorphize (wrap_runtime (Rpc_of.str_of_type ~options ~path type_decl)));
     Vb.mk (pvar of_rpc)
       (polymorphize (wrap_runtime (Of_rpc.str_of_type ~options ~path type_decl)));
-  ] @ (TyDesc_of.str_of_type ~options ~path type_decl)
+    ] @*) (TyDesc_of.str_of_type ~options ~path type_decl)
 
 
 

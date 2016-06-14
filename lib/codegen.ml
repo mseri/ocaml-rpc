@@ -64,10 +64,14 @@ module Interfaces = struct
     description : string;
     type_decls : Types.boxed_def list;
     interfaces : Interface.t list;
+    exn_decls : Types.boxed_def;
   }  
   
   let empty name title description =
-    { name; title; description; type_decls=[]; interfaces=[] }
+    { name; title; description; exn_decls=Types.BoxedDef Types.int64; type_decls=[]; interfaces=[] }
+    
+  let register_exn is es =
+    { is with exn_decls=Types.BoxedDef es }
     
   let add_interface is i =
     let typedefs = Interface.all_types i in

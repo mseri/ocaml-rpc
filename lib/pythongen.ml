@@ -17,7 +17,7 @@ let string_of_ts ts = String.concat "\n" (List.concat (List.map lines_of_t ts))
 
 (* generate a fresh id *)
 let fresh_id =
-  let counter = ref 0 in
+  let counter = ref 5 in
   fun () ->
     incr counter;
     "tmp_" ^ (string_of_int !counter)
@@ -28,13 +28,13 @@ let rec typecheck : type a.a Types.typ -> string -> t list = fun ty v ->
   let open Types in
   let open Printf in
   let raise_type_error =
-    Line (sprintf "raise (TypeError(\"%s\", repr(%s)))" ((*Types.ocaml_of_t ty*)"") v) in
+    Line (sprintf "raise (TypeError(\"%s\", repr(%s)))" (Types.ocaml_of_t ty) v) in
   let handle_basic b =
     let python_of_basic : type a. a Types.basic -> string = function
       | Int64   -> "0L"
       | Int32   -> "0"
       | Int     -> "0"
-      | String  -> "\"string\""
+     | String  -> "\"string\""
       | Float  -> "1.1"
       | Bool -> "True"
       | Char -> "'c'"
@@ -59,7 +59,7 @@ let rec typecheck : type a.a Types.typ -> string -> t list = fun ty v ->
     let check boxedfield =
       let BoxedField f = boxedfield in
       typecheck f.field (sprintf "%s['%s']" v f.fname) in
-    List.concat (List.map check fields)
+    List.concat (List.rev (List.map check (List.rev fields)))
   | Variant { variants } ->
     let check first boxed_tag =
       let BoxedTag t = boxed_tag in
@@ -68,9 +68,9 @@ let rec typecheck : type a.a Types.typ -> string -> t list = fun ty v ->
         [ Line (sprintf "%sif %s == '%s':" (if first then "" else "el") v t.vname) ]
       | ty ->
         [ Line (sprintf "%sif %s[0] == '%s':" (if first then "" else "el") v t.vname);
-          Block (typecheck ty (sprintf "%s[1:]" v))
+          Block (typecheck ty (sprintf "%s[1]" v))
         ] in
-    List.fold_left (fun acc x -> List.concat [(check false x);acc]) (check true (List.hd variants)) (List.tl variants) 
+    List.fold_left (fun acc x -> List.concat [acc; (check false x)]) (check true (List.hd variants)) (List.tl variants) 
   | Array t ->
     let id = fresh_id () in
     [
@@ -143,33 +143,59 @@ let rec value_of : type a. a Types.typ -> string =
     | Tuple (a, b) ->
       "[]"
 
-(*
-let exn_decl env e =
+
+let exn_var myarg =
   let open Printf in
-  let rec unpair = function
-    | Type.Pair(a, b) -> unpair a @ (unpair b)
-    | Type.Name x -> unpair((List.assoc x env).Ident.ty)
-    | t -> [ t ] in
-  let args = unpair e.TyDecl.ty in
-  let names = List.fold_left (fun (i, acc) _ -> (i + 1, sprintf "arg_%d" i :: acc)) (0, []) args |> snd |> List.rev in
-  [
-    Line (sprintf "class %s(Rpc_light_failure):" e.TyDecl.name);
-    Block ([
-        Line (sprintf "def __init__(self%s):" (String.concat "" (List.map (fun x -> ", " ^ x) names)));
-        Block (
-          [ Line (sprintf "Rpc_light_failure.__init__(self, \"%s\", [ %s ])" e.TyDecl.name (String.concat ", " names))
-          ] @ (List.concat (List.map (fun (ty, v) -> typecheck env ty v) (List.combine args names))
-              ) @ (List.map (fun v -> Line (sprintf "self.%s = %s" v v)) names)
-        )
-      ])
-  ]
-*)
+  let open Types in
+  let inner : type a b. (a, b) tag -> t list = function tag ->
+    let has_arg = match tag.vcontents with | Unit -> false | _ -> true in  
+    if not has_arg
+    then
+      [
+        Line (sprintf "class %s(Rpc_light_failure):" tag.vname);
+        Block ([
+            Line "def __init__(self)";
+            Block (
+              [ Line (sprintf "Rpc_light_failure.__init__(self, \"%s\", [])" tag.vname) ])])]
+    else
+      [
+        Line (sprintf "class %s(Rpc_light_failure):" tag.vname);
+        Block ([
+            Line (sprintf "def __init__(self, arg_0):");
+            Block (
+              [ Line (sprintf "Rpc_light_failure.__init__(self, \"%s\", [ arg_0 ])" tag.vname )
+              ] @ (typecheck tag.vcontents "arg_0")
+              @ [ Line "self.arg_0 = arg_0" ])])
+          
+      ]
+  in
+  match myarg with
+  | BoxedDef { ty = Variant { variants } } ->
+    List.concat (List.map (fun (BoxedTag t) -> inner t) variants)
+  | BoxedDef { ty } ->
+    failwith (Printf.sprintf "Unable to handle non-variant exceptions (%s)" (Types.ocaml_of_t ty)) 
+    
+
 
 let skeleton_method unimplemented i (BoxedFunction m) =
   let inputs = Method.(find_inputs m.ty) in
   let output = Method.(find_output m.ty) in
 
+  let inputs = List.filter
+      (function
+        | Idl.Param.Boxed { typedef } ->
+            match typedef.Types.ty with
+            | Types.Unit -> false
+            | _ -> true) inputs in
+  
   let open Printf in
+
+  let output_py (Idl.Param.Boxed a) =
+    match a.Idl.Param.typedef.Types.ty with
+    | Types.Unit -> []
+    | _ -> [ Line (sprintf "result[\"%s\"] = %s" a.Idl.Param.name (value_of a.Idl.Param.typedef.Types.ty)) ]
+  in
+  
   [
     Line (sprintf "def %s(self%s):" m.Method.name (String.concat "" (List.map (fun x -> ", " ^ x) (List.map (fun (Idl.Param.Boxed x) -> x.Idl.Param.name) inputs))));
     Block ([
@@ -180,7 +206,7 @@ let skeleton_method unimplemented i (BoxedFunction m) =
           else ([
               Line "result = {}";
             ] @ (
-                List.map (fun (Idl.Param.Boxed a) -> Line (sprintf "result[\"%s\"] = %s" a.Idl.Param.name (value_of a.Idl.Param.typedef.Types.ty))) [output]
+                output_py output
               ) @ [
                 Line "return result"
               ])
@@ -244,6 +270,12 @@ let server_of_interface i =
   let open Printf in
   let typecheck_method_wrapper (BoxedFunction m) =
     let inputs = Method.(find_inputs m.ty) in
+    let inputs = List.filter
+        (function
+          | Idl.Param.Boxed { typedef } ->
+            match typedef.Types.ty with
+            | Types.Unit -> false
+            | _ -> true) inputs in
     let output = Method.(find_output m.ty) in
     let extract_input (Idl.Param.Boxed arg) =
       [ Line (sprintf "if not(args.has_key('%s')):" arg.Idl.Param.name);
@@ -251,9 +283,12 @@ let server_of_interface i =
         Line (sprintf "%s = args[\"%s\"]" arg.Idl.Param.name arg.Idl.Param.name) ]
       @ (typecheck arg.Idl.Param.typedef.Types.ty arg.Idl.Param.name) in
     let check_output (Idl.Param.Boxed arg) =
+      match arg.Idl.Param.typedef.Types.ty with
+      | Types.Unit -> []
+      | _ ->
       (* The ocaml rpc-light doesn't actually support named results, instead we
-         			   have single anonymous results only. *)
-      typecheck arg.Idl.Param.typedef.Types.ty "results" in
+         have single anonymous results only. *)
+        typecheck arg.Idl.Param.typedef.Types.ty "results" in
     [
       Line (sprintf "def %s(self, args):" m.Method.name);
       Block ([
@@ -314,6 +349,12 @@ let test_impl_of_interfaces i =
 let commandline_parse i (BoxedFunction m) =
   let open Printf in
   let inputs = Method.(find_inputs m.ty) in
+  let inputs = List.filter
+      (function
+        | Idl.Param.Boxed { typedef } ->
+          match typedef.Types.ty with
+          | Types.Unit -> false
+          | _ -> true) inputs in
   let output = Method.(find_output m.ty) in
   [
     Line (sprintf "def _parse_%s(self):" m.Method.name);
@@ -390,9 +431,9 @@ let of_interfaces i =
   [
     Line "from xapi import *";
     Line "import traceback";
-  ] (*@ (
-    List.concat (List.map (exn_decl env) i.Interfaces.exn_decls)
-      ) *) @ (
+  ] @ (
+    exn_var i.Interfaces.exn_decls
+      ) @ (
     List.fold_left (fun acc i -> acc @
                                  (server_of_interface i) @ (skeleton_of_interface i) @ (test_impl_of_interface i) @ (commandline_of_interface i)
                    ) [] i.Interfaces.interfaces

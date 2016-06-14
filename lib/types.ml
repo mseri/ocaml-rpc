@@ -50,7 +50,7 @@ and 'a variant_value = { tag : string; contents: Rpc.t }
 
 let int    = { name="int";    ty=Basic Int;    description="Native integer" }
 let int32  = { name="int32";  ty=Basic Int32;  description="32-bit integer"}
-let int64  = { name="int64";  ty=Basic Int32;  description="64-bit integer"}
+let int64  = { name="int64";  ty=Basic Int64;  description="64-bit integer"}
 let bool   = { name="bool";   ty=Basic Bool;   description="Boolean"}
 let float  = { name="float";  ty=Basic Float;  description="Floating-point number"}
 let string = { name="string"; ty=Basic String; description="String"}
@@ -166,19 +166,25 @@ let rec unmarshal : type a. a typ -> Rpc.t -> a Rpc.error_or = fun t v ->
 let rec marshal : type a. a typ -> a -> Rpc.t = fun t v ->
   let open Rpc in
   let open Result in
+  let rpc_of_basic : type a. a basic -> a -> Rpc.t = fun t v ->
+    match t with
+    | Int -> rpc_of_int v
+    | Int32 -> rpc_of_int32 v
+    | Int64 -> rpc_of_int64 v
+    | Bool -> rpc_of_bool v
+    | Float -> rpc_of_float v
+    | String -> rpc_of_string v
+    | Char -> rpc_of_int (Char.code v)
+  in
   match t with
-  | Basic Int -> rpc_of_int v
-  | Basic Int32 -> rpc_of_int32 v
-  | Basic Int64 -> rpc_of_int64 v
-  | Basic Bool -> rpc_of_bool v
-  | Basic Float -> rpc_of_float v
-  | Basic String -> rpc_of_string v
-  | Basic Char -> rpc_of_int (Char.code v)
+  | Basic t -> rpc_of_basic t v
   | DateTime -> rpc_of_dateTime v
   | Array typ -> Enum (List.map (marshal typ) (Array.to_list v))
   | List typ -> Enum (List.map (marshal typ) v)
   | Dict (String, typ) ->
     Rpc.Dict (List.map (fun (k,v) -> (k, marshal typ v)) v)
+  | Dict (basic, typ) ->
+    Rpc.Enum (List.map (fun (k,v) -> Rpc.Enum [ rpc_of_basic basic k; marshal typ v ]) v)
   | Unit -> rpc_of_unit v
   | Option _ ->
     failwith "Unhandled"
@@ -195,7 +201,11 @@ let rec marshal : type a. a typ -> a -> Rpc.t = fun t v ->
             (f.fname, List.assoc f.fname v.vfields)) fields
       in Rpc.Dict fields
     end
-
+  | Variant _ -> begin
+      let { tag; contents } = v in
+      Rpc.Enum [ Rpc.String tag; contents ]
+    end
+    
 let getf : type t a. (a, t) field -> t structure_value -> a Rpc.error_or =
   fun field v ->
     let v = List.assoc field.fname v.vfields in
@@ -210,6 +220,34 @@ let mkvar : type t a. (a, t) tag -> a -> t variant_value =
   { tag = variant.vname; contents = marshal variant.vcontents contents }
 
 
+let ocaml_of_basic : type a. a basic -> string = function
+  | Int64 -> "int64"
+  | Int32 -> "int32"
+  | Int -> "int"
+  | String -> "string"
+  | Float -> "float"
+  | Bool -> "bool"
+  | Char -> "char"
+
+let rec ocaml_of_t : type a. a typ -> string = function
+  | Basic b -> ocaml_of_basic b
+  | DateTime -> "string"
+  | Array t -> ocaml_of_t t ^ " list"
+  | List t -> ocaml_of_t t ^ " list"
+  | Dict (b,t) -> Printf.sprintf "(%s * %s) list" (ocaml_of_basic b) (ocaml_of_t t)
+  | Unit -> "unit"
+  | Option t -> ocaml_of_t t ^ " option"
+  | Tuple (a,b) -> Printf.sprintf "(%s * %s)" (ocaml_of_t a) (ocaml_of_t b)
+  | Struct { sname; fields } ->
+    let fields = List.map (function
+        | BoxedField f ->
+          Printf.sprintf "%s: %s;" f.fname (ocaml_of_t f.field)) fields in
+    Printf.sprintf "{ %s }" (String.concat "\n" fields)            
+  | Variant { variants } ->
+    let tags = List.map (function
+        | BoxedTag t ->
+          Printf.sprintf "| %s (%s) (** %s *)" t.vname (ocaml_of_t t.vcontents) t.vdescription) variants in
+    String.concat "\n" tags
 
 
 type vm = {
