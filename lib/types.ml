@@ -242,12 +242,12 @@ let rec ocaml_of_t : type a. a typ -> string = function
     let fields = List.map (function
         | BoxedField f ->
           Printf.sprintf "%s: %s;" f.fname (ocaml_of_t f.field)) fields in
-    Printf.sprintf "{ %s }" (String.concat "\n" fields)            
+    Printf.sprintf "{ %s }" (String.concat " " fields)            
   | Variant { variants } ->
     let tags = List.map (function
         | BoxedTag t ->
           Printf.sprintf "| %s (%s) (** %s *)" t.vname (ocaml_of_t t.vcontents) t.vdescription) variants in
-    String.concat "\n" tags
+    String.concat " " tags
 
 
 type vm = {
