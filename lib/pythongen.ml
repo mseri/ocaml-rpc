@@ -432,7 +432,7 @@ let of_interfaces i =
     Line "from xapi import *";
     Line "import traceback";
   ] @ (
-    exn_var i.Interfaces.exn_decls
+    try exn_var i.Interfaces.exn_decls with e -> Printf.fprintf stderr "Error while handling %s" i.Interfaces.name; raise e
       ) @ (
     List.fold_left (fun acc i -> acc @
                                  (server_of_interface i) @ (skeleton_of_interface i) @ (test_impl_of_interface i) @ (commandline_of_interface i)
