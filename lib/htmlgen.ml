@@ -3,14 +3,7 @@ open Idl
 open Codegen
 open Cow.Html
     
-type page = {
-  name: string;
-  title: string;
-  filename: string;
-  path: string;
-  description: string;
-  api: Interfaces.t;
-}
+
 
 (* Printable string of type *)
 let rec html_of_t : type a.a typ -> string list =
@@ -239,166 +232,10 @@ let of_interfaces x =
                 h1 (string name);
                 p (string description);
               ] @ 
-
                 List.concat (List.map (of_interface x) x.Interfaces.interfaces)))]))
     
 
 let to_string x = Cow.Html.to_string (of_interfaces x)
 
-(*
-let topbar pages =
-  let link_of_page page =
-    let html = [ `Data (page.name ^ ".html") ] in
-    let name = [ `Data page.name ] in
-    <:html<
-      <li><a href="$html$">$name$</a></li>
-    >> in
-<:html<
-<div class="title-bar" data-responsive-toggle="main-menu" data-hide-for="medium">
-  <button class="menu-icon" type="button" data-toggle=""></button>
-  <div class="title-bar-title">Menu</div>
-</div>
-
-    <div class="top-bar" id="main-menu">
-      <div class="top-bar-left">
-	<ul class="menu" data-dropdown-menu="">
-	  <li class="menu-text">SMAPIv3</li>
-	</ul>
-      </div>
-      <div class="top-bar-right">
-	<ul class="menu" data-responsive-menu="drilldown medium-dropdown">
-	  <li class="has-submenu">
-            <a href="features.html">Learn</a>
-            <ul class="submenu menu vertical" data-submenu="">
-              <li><a href="features.html">Features</a></li>
-              <li><a href="concepts.html">Concepts</a></li>
-              <li><a href="architecture.html">Architecture</a></li>
-              <li><a href="faq.html">FAQ</a></li>
-            </ul>
-	  </li>
-	  <li>
-            <a href="#">Develop</a>
-            <ul class="submenu menu vertical">
-              $List.concat (List.map link_of_page pages)$
-            </ul>
-	  </li>
-	  <li>
-            <a href="#">Support</a>
-            <ul class="submenu menu vertical">
-              <li><a href="contact.html">Mailing list</a></li>
-              <li><a href="contact.html">Issue tracker</a></li>
-              <li><a href="contact.html">IRC</a></li>
-            </ul>
-	  </li>
-	  <li class="active"><a href="getstarted.html">Get Started</a></li>
-	</ul>
-      </div>
-    </div>
->>
 
 
-let index_html oc pages =
-  let header = <:html<
-  <header>
-    <div class="row">
-      <div class="large-12 columns">
-        <h1>Xapi storage interface</h1>
-        <h3 class="subheader">An easy way to connect <a href="http://www.xenproject.org/developers/teams/xapi.html">Xapi</a> to any storage type.</h3>
-        <hr/>
-        <h2>Who is this for?</h2>
-        <p>This is for anyone who has a storage system which is not supported
-           by xapi out-of-the-box.</p>
-      </div>
-    </div>
-    <div class="row">
-      <div class="large-6 columns">
-        <img src="img/your-bit-here.svg" alt="Your bit here"/>
-      </div>
-      <div class="large-6 columns">
-        <p>This is also for anyone who wants to manage their
-           storage in a customized way. If you can make your volumes appear
-           as Linux block devices <i>or</i> you can refer to the volumes via
-           URIs of the form <tt>iscsi://</tt> <tt>nfs://</tt> or <tt>rbd://</tt>then
-           this documentation is for you.</p>
-        <p><b>No Xapi or Xen specific knowledge
-           is required.</b></p>
-      </div>
-    </div>
-    <div class="row">
-      <div class="large-12 columns panel callout">
-        <h2>Status of this documentation</h2>
-        <p>This documentation is a draft intended for discussion only.
-           Please:</p>
-        <ul>
-          <li>view the <a href="https://github.com/djs55/xapi-storage/issues">issues on github</a></li> or
-          <li>join the <a href="http://lists.xenproject.org/mailman/listinfo/xen-api">mailing list</a></li>
-        </ul>
-      </div>
-    </div>
-  </header>
-  >> in
-  print_file_to oc ("doc/static/header.html");
-  output_string oc (Cow.Html.to_string (topbar pages));
-  output_string oc (Cow.Html.to_string header);
-  print_file_to oc ("doc/static/footer.html")
-
-let placeholder_html oc pages body =
-  let header = <:html<
-    <div class="row">
-      <div class="large-12 columns panel callout">
-        <p>This is a placeholder</p>
-      </div>
-    </div>
-  >> in
-  print_file_to oc ("doc/static/header.html");
-  output_string oc (Cow.Html.to_string (topbar pages));
-  if Sys.file_exists body
-  then print_file_to oc body
-  else output_string oc (Cow.Html.to_string header);
-  print_file_to oc ("doc/static/footer.html")
-
-let page_of_api api = {
-  name = api.Interfaces.name;
-  title = api.Interfaces.title;
-  path = "doc/gen/" ^ api.Interfaces.name ^ ".html";
-  filename = api.Interfaces.name ^ ".html";
-  description = api.Interfaces.description;
-  api = api;
-}
-
-let write apis =
-  let pages = List.map page_of_api apis in
-
-  List.iter
-    (fun page ->
-       with_output_file page.path
-         (fun oc ->
-            print_file_to oc ("doc/static/header.html");
-            output_string oc (Cow.Html.to_string (topbar pages));
-            let idents, api = Types.resolve_refs_in_api page.api in
-            output_string oc (to_string idents api);
-            print_file_to oc ("doc/static/footer.html")
-         );
-    ) pages;
-  with_output_file "doc/index.html"
-    (fun oc ->
-       index_html oc pages
-    );
-  List.iter
-    (fun placeholder ->
-       let out_filename = Printf.sprintf "doc/gen/%s" placeholder in
-       let in_filename = Printf.sprintf "doc/templates/%s.body" placeholder in
-      with_output_file out_filename
-        (fun oc ->
-          placeholder_html oc pages in_filename
-        )
-    ) [
-      "contact.html";
-      "concepts.html";
-      "getstarted.html";
-      "features.html";
-      "faq.html";
-      "learn.html";
-      "architecture.html";
-    ]
-*)
