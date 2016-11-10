@@ -232,6 +232,8 @@ let of_interfaces x =
                 h1 (string name);
                 p (string description);
               ] @ 
+                List.concat (List.map (of_type_decl None) x.Interfaces.type_decls)
+                @
                 List.concat (List.map (of_interface x) x.Interfaces.interfaces)))]))
     
 

@@ -79,7 +79,7 @@ module GenServer = struct
   type 'a comp = 'a
   type rpcfn = Rpc.call -> Rpc.response Rpc.error_or
   type funcs = (string, rpcfn) Hashtbl.t
-  type 'a res = 'a -> funcs -> unit
+  type 'a res = 'a -> funcs -> funcs
     
   type _ fn =
     | Function : 'a Param.t * 'b fn -> ('a -> 'b) fn
@@ -88,6 +88,8 @@ module GenServer = struct
   let returning a = Returning a
   let (@->) = fun t f -> Function (t, f)
 
+  let empty : unit -> funcs = fun () -> Hashtbl.create 20
+  
   let declare name _ ty impl functions =
     let get_named_args call =
       match call.params with
@@ -114,7 +116,9 @@ module GenServer = struct
       in inner ty impl
     in
 
-    Hashtbl.add functions name rpcfn
+    Hashtbl.add functions name rpcfn;
+
+    functions
 
   let server funcs call : response error_or =
     try

@@ -64,13 +64,18 @@ let rec typecheck : type a.a Types.typ -> string -> t list = fun ty v ->
     let check first boxed_tag =
       let BoxedTag t = boxed_tag in
       match t.vcontents with
-      | Unit ->
-        [ Line (sprintf "%sif %s == '%s':" (if first then "" else "el") v t.vname) ]
+      | Unit -> failwith "Can't happen: this has been filtered out"
       | ty ->
         [ Line (sprintf "%sif %s[0] == '%s':" (if first then "" else "el") v t.vname);
           Block (typecheck ty (sprintf "%s[1]" v))
         ] in
-    List.fold_left (fun acc x -> List.concat [acc; (check false x)]) (check true (List.hd variants)) (List.tl variants) 
+    let variants_to_check = List.filter (fun (BoxedTag t) -> match t.vcontents with | Unit -> false | _ -> true) variants in
+    let check_contents = List.fold_left (fun acc x -> List.concat [acc; (check false x)]) (check true (List.hd variants_to_check)) (List.tl variants_to_check) in
+    let all_tags = List.map (fun (BoxedTag t) -> t.vname) variants in
+    let pylist = sprintf "[%s]" (String.concat "," (List.map (fun s -> sprintf "\"%s\"" s) all_tags)) in
+    [ Line (sprintf "if %s[0] not in %s:" v pylist);
+      Block [ raise_type_error ] ] @ check_contents
+      
   | Array t ->
     let id = fresh_id () in
     [
@@ -109,7 +114,10 @@ let rec typecheck : type a.a Types.typ -> string -> t list = fun ty v ->
     ]
   | Tuple (a, b) ->
     [
-      Line "# Not sure how to typecheck pairs"
+      Line (sprintf "if (type(%s) is tuple) and %s.length==2:" v v);
+      Block (
+        typecheck a (Printf.sprintf "%s[0]" v) @
+        typecheck b (Printf.sprintf "%s[1]" v))
     ]
 
 let rec value_of : type a. a Types.typ -> string =

@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 6a08b84fd45eb96c321bacd74b43676f) *)
+(* DO NOT EDIT (digest: caef77a53c256a341da4be85864f7051) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -768,7 +768,7 @@ open Ocamlbuild_plugin;;
 let package_default =
   {
      MyOCamlbuildBase.lib_ocaml =
-       [("rpc", ["lib"], []); ("ppx_deriving_rpc", ["ppx"], [])];
+       [("rpclib", ["lib"], []); ("ppx_deriving_rpc", ["ppx"], [])];
      lib_c = [];
      flags = [];
      includes = []

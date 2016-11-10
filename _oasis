@@ -12,7 +12,7 @@ Flag js
   Description: build the JS client
   Default: false
 
-Library rpc
+Library rpclib
   Path: lib
   Findlibname: rpclib
   Modules: Rpc, Xmlrpc, Jsonrpc, Rpc_client, Types, Idl, Pythongen, Codegen, Htmlgen

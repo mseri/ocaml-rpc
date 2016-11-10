@@ -249,29 +249,6 @@ let rec ocaml_of_t : type a. a typ -> string = function
           Printf.sprintf "| %s (%s) (** %s *)" t.vname (ocaml_of_t t.vcontents) t.vdescription) variants in
     String.concat " " tags
 
-type vm = {
-  name_label : string;
-  name_description : string;
-}
 
-(* fields *)
-let vm_name_label : (string, vm) field = { fname="name_label"; fdescription=""; field=Basic String }
-let vm_name_description : (string, vm) field = { fname="name_description"; fdescription=""; field=Basic String }
 
-(* structure*)
-let vm : vm structure = { sname="vm"; fields = [ BoxedField vm_name_label; BoxedField vm_name_description ] }
 
-(* vm <-> vm structure *)
-let vm_of_vm_structure vm_struct =
-  let open Rpc in
-  getf vm_name_label vm_struct >>= fun name_label ->
-  getf vm_name_description vm_struct >>= fun name_description ->
-  Result.Ok { name_label; name_description }
-let vm_structure_of_vm vm =
-  let vm_structure = { vfields = [] } in
-  let vm_structure = setf vm_name_label vm_structure vm.name_label in
-  let vm_structure = setf vm_name_description vm_structure vm.name_description in
-  vm_structure
-
-(* tydesc *)
-let tydesc_of_vm = Struct vm

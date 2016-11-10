@@ -51,7 +51,7 @@ let attr_doc = attr_string "doc"
     
 (* Open the Rpc module *)
 let wrap_runtime decls =
-  [%expr let open! Rpc in let open! Result in [%e decls]]
+  [%expr let open! Result in [%e decls]]
 
 module Of_rpc = struct
 

@@ -93,7 +93,7 @@ type 'a res = Interface.t -> Interface.t
                                
 let returning a = Returning a
 let (@->) = fun t f -> Function (t, f)
-    
+        
 let declare name description ty interface =
   let m = BoxedFunction Method.({name; description; ty}) in
   Interface.({interface with methods = interface.methods @ [m]})
