@@ -1,0 +1,71 @@
+(library
+ ((name rpclib_core)
+  (public_name rpclib.core)
+  (modules (rpc idl rpcmarshal pythongen codegen rpc_genfake))
+  (libraries (result rresult))
+  (wrapped false)
+ ))
+
+(library
+ ((name xml)
+  (public_name rpclib.xml)
+  (modules (xmlrpc))
+  (libraries (xmlm rpclib.core))
+  (wrapped false)
+ ))
+
+(library
+ ((name json)
+  (public_name rpclib.json)
+  (modules (jsonrpc))
+  (libraries (rpclib.core))
+  (wrapped false)
+ ))
+
+(library
+ ((name cmdlinergen)
+  (public_name rpclib.cmdliner)
+  (modules (cmdlinergen))
+  (libraries (rpclib.core rpclib.json cmdliner))
+  (wrapped false)
+ ))
+
+(library
+ ((name markdowngen)
+  (public_name rpclib.markdown)
+  (modules (markdowngen))
+  (libraries (rpclib.core rpclib.xml rpclib.json))
+  (wrapped false)
+ ))
+
+(library
+ ((name rpclib_lwt)
+  (public_name rpclib.lwt)
+  (modules (rpc_lwt))
+  (libraries (rpclib.core lwt))
+  (wrapped false)
+ ))
+
+(library
+ ((name rpclib_async)
+  (public_name rpclib.async)
+  (modules (rpc_async))
+  (libraries (threads rpclib.core async))
+  (wrapped false)
+ ))
+
+(library
+ ((name rpclib_unix)
+  (public_name rpclib.unix)
+  (modules (rpc_client))
+  (libraries (rpclib.core))
+  (wrapped false)
+ ))
+
+(library
+ ((name rpclib)
+  (public_name rpclib)
+  (libraries (rpclib.xml))
+  (modules (xmlrpc))
+ ))
+
