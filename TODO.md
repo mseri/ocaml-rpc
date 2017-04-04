@@ -1,0 +1,3 @@
+- Build examples
+- Build and run tests for rpclib and ppx_test
+- Wait for the release of the new js_of_ocaml with the new js_of_ocaml-ppx library to complete the port of the js libraries
