@@ -44,7 +44,7 @@ let rec rpc_of_json json =
     Rpc.String (Js.to_string str)
   | _ -> 
     (* Datetime maybe? *)
-    Firebug.console##log (Js.string (Printf.sprintf "Ack! got %s" (Js.to_string ty)));
+    Firebug.console##(log (Js.string (Printf.sprintf "Ack! got %s" (Js.to_string ty))));
     Rpc.Bool false
 
 let of_string s = rpc_of_json (Json.unsafe_input (Js.string s))
@@ -97,7 +97,7 @@ let response_of_string str =
     let result = get "result" d in
     let error = get "error" d in
     let (_:int64) = try match get "id" d with Rpc.Int i -> i | Rpc.String s -> Int64.of_string s with _ -> 
-      Firebug.console##log (Js.string (Printf.sprintf "Weirdness: %s" (Rpc.to_string (get "id" d))));
+      Firebug.console##(log (Js.string (Printf.sprintf "Weirdness: %s" (Rpc.to_string (get "id" d)))));
       raise (Malformed_method_response "id") in
     begin match result, error with
       | v, Rpc.Null    -> Rpc.success v
@@ -105,5 +105,5 @@ let response_of_string str =
       | x,y        -> raise (Malformed_method_response (Printf.sprintf "<result=%s><error=%s>" (Rpc.to_string x) (Rpc.to_string y)))
     end
   | rpc -> 
-    Firebug.console##log (Js.string (Rpc.to_string rpc));
+    Firebug.console##(log (Js.string (Rpc.to_string rpc)));
     failwith "Bah"
