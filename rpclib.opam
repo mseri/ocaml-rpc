@@ -19,4 +19,10 @@ depends: [
   "rresult"
   "xmlm"
 ]
-depopts: [ "js_of_ocaml" ]
+depopts: [
+  "js_of_ocaml"
+  "ppx_driver"
+  "ppx_jane"
+]
+
+
