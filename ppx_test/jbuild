@@ -1,0 +1,8 @@
+(executables
+ ((names (test tytest))
+  (public_names (test tytest))
+  (libraries (ppx_deriving_rpc rpclib rpclib_core json lwt lwt.unix result rresult))
+  (flags (-annot -g))
+  (preprocess (pps (ppx_deriving_rpc)))
+  (package ppx_deriving_rpc)
+ ))
