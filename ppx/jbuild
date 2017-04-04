@@ -1,0 +1,10 @@
+(library
+ ((name ppx_deriving_rpc)
+  (public_name ppx_deriving_rpc)
+  (synopsis "[@@deriving rpc]")
+  (optional)
+  (ppx_runtime_libraries (ppx_deriving))
+  (kind ppx_deriver)
+  (libraries (ppx_deriving compiler-libs ocaml-migrate-parsetree ppx_tools_versioned rpclib.core))
+  (preprocess (action (run ${lib:ppx_tools:rewriter} ${lib:ppx_tools:ppx_metaquot} ${<})))
+  ))
