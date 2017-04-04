@@ -1,0 +1,8 @@
+(library
+ ((name htmlgen)
+  (public_name rpclib.html)
+  (modules (htmlgen))
+  (libraries (rpclib.core cow))
+  (optional)
+  (wrapped false)
+ ))
