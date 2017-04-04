@@ -12,3 +12,5 @@ idl_test_gen.ml
 *.mllib
 lib/META
 _build
+.merlin
+*.install
