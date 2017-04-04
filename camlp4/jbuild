@@ -19,3 +19,12 @@
   (optional)
   (wrapped false)
  ))
+
+(library
+ ((name htmlgen)
+  (public_name rpclib-camlp4.html)
+  (modules (htmlgen))
+  (libraries (rpclib.core cow))
+  (optional)
+  (wrapped false)
+ ))
