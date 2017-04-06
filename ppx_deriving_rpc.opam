@@ -13,4 +13,7 @@ depends: [
   "jbuilder"  {build}
   "ocamlfind" {build}
   "rpclib"
+  "ppx_deriving"
+  "ocaml-migrate-parsetree"
+  "ppx_tools_versioned"
 ]

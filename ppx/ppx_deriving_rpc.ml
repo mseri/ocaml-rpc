@@ -1,16 +1,12 @@
 open Longident
-open Migrate_parsetree
-open Ast_402
-open Parsetree
 open Asttypes
-open Ast_helper
+open Parsetree
 open Location
-open Ast_convenience_402
-
-module Ast_mapper_class = Ast_mapper_class_402
-let ocaml_version = Versions.ocaml_402
+open Ast_helper
+open Ast_convenience
 
 let deriver = "rpc"
+
 
 let argn = Printf.sprintf "a%d"
 
