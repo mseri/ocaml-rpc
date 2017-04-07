@@ -1,12 +1,14 @@
+open Migrate_parsetree
+open Ast_405
+
 open Longident
 open Asttypes
 open Parsetree
 open Location
 open Ast_helper
-open Ast_convenience
+open Ast_convenience_405
 
 let deriver = "rpc"
-
 
 let argn = Printf.sprintf "a%d"
 
@@ -47,7 +49,7 @@ let is_string typ =
  *      }
  *
  *  calling 'attr_string 'key' default attributes' will return 'type'
- *)
+*)
 let attr_string name default attrs =
   match Ppx_deriving.attr ~deriver name attrs |>
         Ppx_deriving.Arg.(get_attr ~deriver string) with
@@ -84,8 +86,8 @@ module Of_rpc = struct
       else
         function
         | Rpc.Enum l -> List.map
-          (function | Rpc.Enum [k;v] -> ([%e expr_of_typ typ1] k,[%e expr_of_typ typ2] v)
-                    | y -> failwith (Printf.sprintf "Expecting Rpc.Enum (within an Enum), but found '%s'" (Rpc.to_string y))) l
+                          (function | Rpc.Enum [k;v] -> ([%e expr_of_typ typ1] k,[%e expr_of_typ typ2] v)
+                                    | y -> failwith (Printf.sprintf "Expecting Rpc.Enum (within an Enum), but found '%s'" (Rpc.to_string y))) l
         | y -> failwith (Printf.sprintf "Expecting Rpc.Enum, but found '%s'" (Rpc.to_string y)) ]
 
     | [%type: [%t? typ] list] -> [%expr
@@ -149,22 +151,22 @@ module Of_rpc = struct
               raise_errorf ~loc:ptyp_loc "%s cannot be derived for %s"
                 deriver (Ppx_deriving.string_of_core_type typ))
       and inherits_case =
-        let toplevel_typ = typ in
+        let _toplevel_typ = typ in
         inherits |>
         List.map (function Rinherit typ -> typ | _ -> assert false) |>
         List.fold_left (fun expr typ ->
             [%expr
               try [%e expr_of_typ typ] rpc (*  :> [%t toplevel_typ]*)
               with _ -> [%e expr]])
-                [%expr failwith "Unknown tag/contents"] |>
+          [%expr failwith "Unknown tag/contents"] |>
         Exp.case [%pat? _]
       in
       [%expr fun (rpc : Rpc.t) ->
-             let rpc' = match rpc with
-               | Rpc.Enum ((Rpc.String x)::xs) -> Rpc.Enum ((Rpc.String (String.lowercase x))::xs)
-               | Rpc.String x -> Rpc.String (String.lowercase x)
-               | y -> y in
-             [%e Exp.match_ [%expr rpc'] (tag_cases @ [inherits_case])]]
+        let rpc' = match rpc with
+          | Rpc.Enum ((Rpc.String x)::xs) -> Rpc.Enum ((Rpc.String (String.lowercase x))::xs)
+          | Rpc.String x -> Rpc.String (String.lowercase x)
+          | y -> y in
+        [%e Exp.match_ [%expr rpc'] (tag_cases @ [inherits_case])]]
 
     | { ptyp_desc = Ptyp_any } ->
       failwith "Ptyp_any not handled"
@@ -238,16 +240,24 @@ module Of_rpc = struct
         let cases =
           constrs |> List.map (fun { pcd_name = { txt = name }; pcd_args; pcd_attributes } ->
               match pcd_args with
-              | typs ->
+              | Pcstr_tuple(typs) ->
                 let subpattern = List.mapi (fun i _ -> pvar (argn i)) typs |> plist in
-                let exprs = List.mapi (fun i typ -> [%expr [%e expr_of_typ typ] [%e evar (argn i) ] ] ) pcd_args in
+                let exprs = match pcd_args with
+                  | Pcstr_tuple(args) -> List.mapi (fun i typ -> [%expr [%e expr_of_typ typ] [%e evar (argn i) ] ] ) args
+                  | Pcstr_record _ ->
+                    raise_errorf "ppx_deriving: record variants are not supported"
+                in
                 let rpc_of = constr name exprs in
                 let main = [%pat? Rpc.String [%p pstr (String.lowercase (attr_name name pcd_attributes))]] in
                 let pattern = match pcd_args with
-                  | [] -> main
-                  | _ -> [%pat? Rpc.Enum ([%p main] :: [%p subpattern])]
+                  | Pcstr_tuple([]) -> main
+                  | Pcstr_tuple(_) -> [%pat? Rpc.Enum ([%p main] :: [%p subpattern])]
+                  | Pcstr_record _ ->
+                    raise_errorf "ppx_deriving: record variants are not supported"
                 in
-                Exp.case pattern rpc_of)
+                Exp.case pattern rpc_of
+              | Pcstr_record _ ->
+                raise_errorf "ppx_deriving: record variants are not supported")
         in
         let default =
           Exp.case
@@ -286,7 +296,7 @@ module Rpc_of = struct
     | {ptyp_desc = Ptyp_tuple typs } ->
       let args = List.mapi (fun i typ -> app (expr_of_typ  typ) [evar (argn i)]) typs in
       [%expr fun [%p ptuple (List.mapi (fun i _ -> pvar (argn i)) typs)] ->
-             Rpc.Enum [%e list args]]
+        Rpc.Enum [%e list args]]
     | [%type: [%t? typ] option] ->
       let e = expr_of_typ  typ in
       [%expr fun x -> match x with None -> Rpc.Enum [] | Some y -> Rpc.Enum [ [%e e] y ] ]
@@ -355,10 +365,10 @@ module Rpc_of = struct
               if is_option pld_type
               then
                 [%expr let rpc = [%e (expr_of_typ  pld_type)] [%e Exp.field (evar "x") (mknoloc (Lident name))] in
-                       match rpc with
-                       | Rpc.Enum [x] -> Some ([%e str rpc_name], x)
-                       | Rpc.Enum [] -> None
-                       | _ -> failwith (Printf.sprintf "Programmer error when marshalling %s.%s" [%e str type_decl.ptype_name.txt] [%e str name]) (* Should never happen *)
+                  match rpc with
+                  | Rpc.Enum [x] -> Some ([%e str rpc_name], x)
+                  | Rpc.Enum [] -> None
+                  | _ -> failwith (Printf.sprintf "Programmer error when marshalling %s.%s" [%e str type_decl.ptype_name.txt] [%e str name]) (* Should never happen *)
                 ]
               else
                 [%expr Some ([%e str rpc_name],
@@ -373,7 +383,7 @@ module Rpc_of = struct
         let cases =
           constrs |> List.map (fun { pcd_name = { txt = name }; pcd_args; pcd_attributes } ->
               match pcd_args with
-              | typs ->
+              | Pcstr_tuple(typs) ->
                 let args = List.mapi (fun i typ -> [%expr [%e expr_of_typ  typ] [%e evar (argn i)]]) typs in
                 let argsl = list args in
                 let pattern = List.mapi (fun i _ -> pvar (argn i)) typs in
@@ -381,7 +391,9 @@ module Rpc_of = struct
                   | [] -> [%expr Rpc.String [%e str (attr_name name pcd_attributes)]]
                   | args -> [%expr Rpc.Enum ((Rpc.String [%e str (attr_name name pcd_attributes)]) :: [%e argsl])]
                 in
-                Exp.case (pconstr name pattern) rpc_of)
+                Exp.case (pconstr name pattern) rpc_of
+              | Pcstr_record _ ->
+                raise_errorf "ppx_deriving: record variants are not supported")
         in
         Exp.function_ cases
     in

@@ -39,22 +39,6 @@
  ))
 
 (library
- ((name rpclib_lwt)
-  (public_name rpclib.lwt)
-  (modules (rpc_lwt))
-  (libraries (rpclib.core lwt))
-  (wrapped false)
- ))
-
-(library
- ((name rpclib_async)
-  (public_name rpclib.async)
-  (modules (rpc_async))
-  (libraries (threads rpclib.core async))
-  (wrapped false)
- ))
-
-(library
  ((name rpclib_unix)
   (public_name rpclib.unix)
   (modules (rpc_client))

@@ -3,10 +3,10 @@ OCAMLOPT = ocamlfind ocamlopt
 OCAMLFLAGS = -annot -g
 
 PACKS = lwt,lwt.unix,oUnit,result,rresult
-RPC = -I ../_build/lib
+RPC = -I ../_build/install/default/lib/rpclib
 RPCLINK = rpclib_core.cmxa rpclib.cmxa json.cmxa
 
-PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/ppx/ppx_deriving_rpc.cma
+PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/install/default/lib/ppx_deriving_rpc/ppx_deriving_rpc.cma
 
 default: test tytest
 	./test

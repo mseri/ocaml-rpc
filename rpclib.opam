@@ -12,17 +12,15 @@ build: [["jbuilder" "build" "--only-packages" "rpclib" "--root" "." "-j" jobs "@
 depends: [
   "jbuilder"  {build}
   "ocamlfind" {build}
-  "async"
   "cmdliner"
-  "cow"
-  "lwt"
   "rresult"
   "xmlm"
 ]
 depopts: [
+  "async"
+  "cow"
   "js_of_ocaml"
-  "ppx_driver"
-  "ppx_jane"
+  "lwt"
 ]
 
 

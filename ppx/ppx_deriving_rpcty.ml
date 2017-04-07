@@ -1,9 +1,12 @@
+open Migrate_parsetree
+open Ast_405
+
 open Longident
 open Asttypes
 open Parsetree
 open Location
 open Ast_helper
-open Ast_convenience
+open Ast_convenience_405
 
 let deriver = "rpcty"
 
@@ -125,7 +128,7 @@ module Typ_of = struct
                              "fset", fset;
                             ] ] ], default ))
         in
-        let field_name_bindings = List.map (fun (fname, _, field_name, typ, record, _) ->
+        let field_name_bindings = List.map (fun (_, _, field_name, _, record, _) ->
             Vb.mk (Pat.constraint_ (pvar field_name)
                      ([%type: (_, [%t mytype]) Rpc.Types.field]))
               record) fields in
@@ -165,14 +168,24 @@ module Typ_of = struct
               let rpc_name = attr_name name pcd_attributes in
               let lower_rpc_name = String.lowercase rpc_name in
               let contents = match pcd_args with
-                | [] -> [%expr Unit]
-                | _ -> List.fold_right (fun t acc ->
+                | Pcstr_tuple([]) -> [%expr Unit]
+                | Pcstr_tuple(args) -> List.fold_right (fun t acc ->
                     [%expr Tuple ([%e expr_of_typ  t], [%e acc])])
-                    (List.tl pcd_args)
-                    [%expr [%e (expr_of_typ  (List.hd pcd_args))]]
+                    (List.tl args)
+                    [%expr [%e (expr_of_typ  (List.hd args))]]
+                | Pcstr_record _ ->
+                  raise_errorf "deriving_rpc: record variants are not supported"
               in
-              let args = List.mapi (fun i typ -> evar (argn i)) pcd_args in
-              let pattern = List.mapi (fun i _ -> pvar (argn i)) pcd_args in
+              let args = match pcd_args with
+                | Pcstr_tuple(args) -> List.mapi (fun i typ -> evar (argn i)) args
+                | Pcstr_record _ ->
+                  raise_errorf "deriving_rpc: record variants are not supported"
+              in
+              let pattern = match pcd_args with
+                | Pcstr_tuple(args) -> List.mapi (fun i _ -> pvar (argn i)) args
+                | Pcstr_record _ ->
+                  raise_errorf "deriving_rpc: record variants are not supported"
+              in
               let vpreview_default = if List.length constrs = 1 then [] else [Exp.case (Pat.any ()) [%expr None]] in
               let vpreview = Exp.function_ ([
                   Exp.case (pconstr name pattern) [%expr Some [%e tuple args ]];
@@ -186,13 +199,13 @@ module Typ_of = struct
                   "tdescription", attr_doc pcd_attributes;
                   "tpreview", vpreview;
                   "treview", vreview]]] in
-              let vconstructor_case = Exp.case (Pat.constant (Const_string (lower_rpc_name,None))) [%expr Rresult.R.bind (t.tget [%e contents]) ([%e Exp.function_ [Exp.case (ptuple pattern) [%expr Rresult.R.ok [%e (constr name args)]]]])] in
+              let vconstructor_case = Exp.case (Pat.constant (Pconst_string (lower_rpc_name,None))) [%expr Rresult.R.bind (t.tget [%e contents]) ([%e Exp.function_ [Exp.case (ptuple pattern) [%expr Rresult.R.ok [%e (constr name args)]]]])] in
               (variant, vconstructor_case))
         in
         let default = [Exp.case (Pat.any ())
                          (match default_case with
-                         | None -> [%expr Rresult.R.error_msg (Printf.sprintf "Unknown tag '%s'" s)]
-                         | Some d -> [%expr Result.Ok [%e d]])] in
+                          | None -> [%expr Rresult.R.error_msg (Printf.sprintf "Unknown tag '%s'" s)]
+                          | Some d -> [%expr Result.Ok [%e d]])] in
         let vconstructor = [%expr fun s' t -> let s = String.lowercase s' in [%e Exp.match_ (evar "s") ((List.map snd cases) @ default)]] in
         [ Vb.mk (pvar typ_of_lid) (wrap_runtime (polymorphize (
               [%expr Variant ({

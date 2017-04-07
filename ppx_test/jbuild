@@ -1,8 +1,18 @@
 (executables
  ((names (test tytest))
   (public_names (test tytest))
-  (libraries (ppx_deriving_rpc rpclib rpclib_core json lwt lwt.unix result rresult))
+  (libraries (ppx_deriving_rpc rpclib rpclib_core json lwt lwt.unix result rresult oUnit))
   (flags (-annot -g))
-  (preprocess (pps (ppx_deriving_rpc)))
+  (preprocess (pps (ppx_deriving_rpc ppx_driver.runner)))
   (package ppx_deriving_rpc)
  ))
+
+(alias
+ ((name   runtest)
+  (deps   (test.exe))
+  (action (run ${<}))))
+
+(alias
+ ((name   runtest)
+  (deps   (tytest.exe))
+  (action (run ${<}))))
