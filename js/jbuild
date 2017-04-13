@@ -4,5 +4,5 @@
     (optional)
     (libraries (rpclib.core js_of_ocaml))
     (modules (rpc_client_js rpc_client_js_helper))
-    (preprocess (pps (js_of_ocaml.ppx.driver ppx_jane ppx_driver.runner)))
+    (preprocess (pps (js_of_ocaml.ppx)))
    ))
