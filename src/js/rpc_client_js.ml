@@ -27,16 +27,16 @@ let do_rpc enc dec content_type ~url call =
 
   req##_open (Js.string method_, Js.string url, Js._true);
   req##setRequestHeader (Js.string "Content-type", Js.string content_type);
-  req##onreadystatechange <- Js.wrap_callback
+  req##.onreadystatechange := Js.wrap_callback
       (fun _ ->
-         (match req##readyState with
+         (match req##.readyState with
           | XmlHttpRequest.DONE ->
-            Lwt.wakeup w (dec (Js.to_string req##responseText))
+            Lwt.wakeup w (dec (Js.to_string req##.responseText))
           | _ -> ()));
 
   req##send (Js.some (Js.string contents));
 
-  Lwt.on_cancel res (fun () -> req##abort ()) ;
+  Lwt.on_cancel res (fun () -> req##.abort ()) ;
   res
 
 let do_xml_rpc = do_rpc Xmlrpc.string_of_call Xmlrpc.response_of_string "text/xml"
