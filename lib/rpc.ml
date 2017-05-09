@@ -18,7 +18,7 @@
 let debug = ref false
 let set_debug x = debug := x
 let get_debug () = !debug
-let lower = String.lowercase
+let lower = String.lowercase_ascii
 
 type t =
   | Int of int64
