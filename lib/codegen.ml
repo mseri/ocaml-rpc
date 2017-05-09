@@ -94,7 +94,7 @@ module Gen () = struct
 
   let implement i () =
     let n = i.Interface.name in
-    if String.capitalize_ascii n <> n then failwith "Interface names must be capitalized";
+    if String.capitalize n <> n then failwith "Interface names must be capitalized";
     let i = Interface.({details=i; methods=(List.rev !methods)}) in
     i
 

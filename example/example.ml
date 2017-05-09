@@ -207,7 +207,7 @@ let exnt_variant : exnt variant = Rpc.Types.{
     vversion = None;
     vdefault = Some (Errors "unknown error tag!");
     vconstructor = (fun s t ->
-        match String.lowercase_ascii s with
+        match String.lowercase s with
         | "errors" -> Rresult.R.map errors.treview (t.tget (Basic String))
         | s -> Rresult.R.error_msg (Printf.sprintf "Unknown tag '%s'" s))
   }

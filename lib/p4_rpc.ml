@@ -447,7 +447,7 @@ module Of_rpc = struct
       let ids, ctyps = decompose_variants _loc t in
       let pattern (n, t) ctyps =
         let ids, pids = new_id_list _loc ctyps in
-        let lowern = String.lowercase_ascii n in
+        let lowern = String.lowercase n in
         let patt =
           if ids = [] then
             <:patt< Rpc.String $str:lowern$ >>
@@ -670,7 +670,7 @@ end
 
 let gen_one (_loc, namespace, name, wire_name, args, rtype) =
   let n = List.length args in
-  let cap_name = String.capitalize_ascii name in
+  let cap_name = String.capitalize name in
   let anonymous_rpcs = list_foldi
       (fun accu arg i -> if arg.kind = `Anonymous then
           (Rpc_of.gen_one (argi (n - i), [], arg.ctyp)) ::

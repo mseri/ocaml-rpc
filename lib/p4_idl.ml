@@ -174,7 +174,7 @@ struct
     let _loc = Ast.Loc.ghost in
 
     let create_call rpc =
-      let cap_name = String.capitalize_ascii rpc.fname in
+      let cap_name = String.capitalize rpc.fname in
       let arg_path = MyRpc.arg_path rpc.loc (rpc.namespace @ [cap_name]) in
       let _loc = rpc.loc in
       <:expr<
@@ -189,7 +189,7 @@ struct
     in
 
     let create rpc =
-      let cap_name = String.capitalize_ascii rpc.fname in
+      let cap_name = String.capitalize rpc.fname in
       let arg_path = MyRpc.arg_path rpc.loc (rpc.namespace @ [cap_name]) in
       <:expr<
         let call = $create_call rpc$ in
@@ -286,7 +286,7 @@ let make_server_sig rpcs withmonad =
 let make_server_functor version rpcs =
   let gen_match_case rpc =
     let _loc = rpc.loc in
-    let cap_name = String.capitalize_ascii rpc.fname in
+    let cap_name = String.capitalize rpc.fname in
     let arg_path =
       Ast.ExId(_loc,MyRpc.arg_path rpc.loc ("Args"::rpc.namespace @ [cap_name])) in
     let impl_path = Ast.ExId(_loc,MyRpc.arg_path rpc.loc ("Impl"::rpc.namespace)) in
