@@ -8,6 +8,10 @@ tags: [
   "org:mirage"
   "org:xapi-project"
 ]
+build-test: [
+    ["jbuilder" "build"]
+    ["jbuilder" "runtest" "-j" jobs]
+]
 depends: [
   "rpclib"
   "rpclib-camlp4"
