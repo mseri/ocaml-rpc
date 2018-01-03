@@ -2,7 +2,7 @@ open Idl
 
 module Gen () = struct
   type implementation = unit -> ((Rpc.call -> Rpc.response) ->
-                      unit Cmdliner.Term.t * Cmdliner.Term.info) list
+                      (unit -> unit) Cmdliner.Term.t * Cmdliner.Term.info) list
 
   type ('a,'b) comp = ('a,'b) Result.result
   type 'a rpcfn = Rpc.call -> Rpc.response
@@ -24,7 +24,7 @@ module Gen () = struct
   let term_of_param : type a. a Param.t -> Rpc.t Cmdliner.Term.t = fun p ->
     let open Rpc.Types in
     let open Cmdliner in
-    let pinfo = Cmdliner.Arg.info [] ~doc:(String.concat " " p.Param.description) ~docv:(p.Param.name) in
+    let pinfo = Cmdliner.Arg.info [] ~doc:(String.concat " " p.Param.description) ~docv:(match p.Param.name with Some s -> s | None -> p.Param.typedef.Rpc.Types.name) in
     let incr () =
       let p = !pos in
       incr pos;
@@ -107,29 +107,44 @@ module Gen () = struct
              | Rpc.String _ -> x
              | _ -> failwith "Type error"))
         (Cmdliner.Arg.(required & pos (incr ()) (some string) None & pinfo))
+    | Abstract {of_rpc; _} -> 
+      Term.app
+        (Term.pure (fun x -> 
+          let x = Jsonrpc.of_string x in
+          match of_rpc x with
+          | Ok _ -> x
+          | Error _ -> failwith "Type error"))
+        (Cmdliner.Arg.(required & pos (incr ()) (some string) None & pinfo))
 
   let declare name desc_list ty =
     let generate rpc =
       let wire_name = Idl.get_wire_name !description name in
-      let rec inner : type b. ((string * Rpc.t) list) Cmdliner.Term.t -> b fn -> unit Cmdliner.Term.t = fun cur f ->
+      let rec inner : type b. (((string * Rpc.t) list) * Rpc.t list) Cmdliner.Term.t -> b fn -> (unit -> unit) Cmdliner.Term.t = fun cur f ->
         match f with
-        | Function (t, f) ->
+        | Function (t, f) -> begin
           let term = term_of_param t in
-          let term = Cmdliner.Term.(const (fun x acc -> (t.Param.name, x)::acc) $ term $ cur) in
-          inner term f
+          match t.Param.name with
+          | Some param_name -> 
+            let term = Cmdliner.Term.(const (fun x (named,unnamed) -> ((param_name, x)::named,unnamed)) $ term $ cur) in
+            inner term f
+          | None ->
+            let term = Cmdliner.Term.(const (fun x (named,unnamed) -> (named,x::unnamed)) $ term $ cur) in
+            inner term f
+          end
         | Returning (ty, err) ->
-          let run args =
-            let call = Rpc.call wire_name [(Rpc.Dict args)] in
+          let run (named,unnamed) =
+            let args = match named with | [] -> List.rev unnamed | _ -> (Rpc.Dict named)::(List.rev unnamed) in
+            let call = Rpc.call wire_name args in
             let response = rpc call in
             match response.Rpc.contents with
             | x -> Printf.printf "%s\n" (Rpc.to_string x);
               ()
           in
-          Cmdliner.Term.(const (fun args -> run args) $ cur)
+          Cmdliner.Term.(const (fun args () -> run args) $ cur)
       in
       let doc = String.concat " " desc_list in
       pos := 0;
-      inner (Cmdliner.Term.pure []) ty, Cmdliner.Term.info wire_name ~doc
+      inner (Cmdliner.Term.pure ([],[])) ty, Cmdliner.Term.info wire_name ~doc
     in
     terms := generate :: !terms
 

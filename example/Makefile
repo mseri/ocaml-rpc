@@ -6,10 +6,10 @@ CPPOFLAGS = -n -V OCAML:4.04.2
 
 PACKS = lwt,lwt.unix,result,cmdliner,rresult,threads,xmlm,yojson
 #,rpclib.cmdliner,rpclib.json,rpclib.html
-RPC = -I ../_build/lib
+RPC = -I ../_build/default/src/lib
 RPCLINK = rpclib_core.cmxa rpclib.cmxa json.cmxa xml.cmxa cmdlinergen.cmxa markdowngen.cmxa yojson.cmxa
 
-PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/ppx/ppx_deriving_rpc.cma
+PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/default/ppx/ppx_deriving_rpc.cma
 
 default: example example2 example3
 

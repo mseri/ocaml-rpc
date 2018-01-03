@@ -5,7 +5,6 @@
   (libraries (rpclib type_conv result))
   (library_flags (-linkall))
   (preprocess (action (run camlp4orf ${<})))
-  (optional)
   (wrapped false)
 ))
 
@@ -16,7 +15,6 @@
   (libraries (rpclib rpclib_syntax camlp4 result))
   (library_flags (-linkall))
   (preprocess (action (run camlp4orf ${<})))
-  (optional)
   (wrapped false)
  ))
 

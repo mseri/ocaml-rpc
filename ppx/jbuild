@@ -1,8 +1,18 @@
+(rule
+ ((targets (ppx_deriving_rpc.ml))
+  (deps    (ppx_deriving_rpc.cppo.ml))
+  (action  (run ${bin:cppo} ${<} -V OCAML:${ocaml_version} -o ${@}))))
+
+(rule
+ ((targets (ppx_deriving_rpcty.ml))
+  (deps    (ppx_deriving_rpcty.cppo.ml))
+  (action  (run ${bin:cppo} ${<} -V OCAML:${ocaml_version} -o ${@}))))
+
 (library
  ((name ppx_deriving_rpc)
   (public_name ppx_deriving_rpc)
   (synopsis "[@@deriving rpc]")
   (kind ppx_rewriter)
-  (libraries (ppx_deriving ocaml-migrate-parsetree ppx_tools_versioned ppx_tools_versioned.metaquot_405 rpclib.core))
-  (preprocess (pps (ppx_tools_versioned.metaquot_405)))
+  (libraries (ppx_deriving ppx_deriving.api ppx_tools compiler-libs.common rpclib.core))
+  (preprocess (action (run ppxfind -legacy ppx_tools.metaquot --as-pp ${<})))
  ))

@@ -1,3 +1,18 @@
+(rule
+ ((targets (codegen.ml))
+  (deps    (codegen.cppo.ml))
+  (action  (run ${bin:cppo} ${<} -V OCAML:${ocaml_version} -o ${@}))))
+
+(rule
+ ((targets (rpcmarshal.ml))
+  (deps    (rpcmarshal.cppo.ml))
+  (action  (run ${bin:cppo} ${<} -V OCAML:${ocaml_version} -o ${@}))))
+
+(rule
+ ((targets (rpc.ml))
+  (deps    (rpc.cppo.ml))
+  (action  (run ${bin:cppo} ${<} -V OCAML:${ocaml_version} -o ${@}))))
+
 (library
  ((name rpclib_core)
   (public_name rpclib.core)
@@ -18,7 +33,7 @@
  ((name json)
   (public_name rpclib.json)
   (modules (jsonrpc))
-  (libraries (rpclib.core))
+  (libraries (rpclib.core yojson))
   (wrapped false)
  ))
 

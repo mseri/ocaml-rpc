@@ -2,7 +2,14 @@ OCAMLC = ocamlfind ocamlc
 OCAMLOPT = ocamlfind ocamlopt
 OCAMLFLAGS = -annot -g
 
-PACKS = rpclib,rpclib.json,ppx_deriving_rpc,unix
+PACKS = unix,rresult,xmlm,yojson
+RPC = -I ../_build/default/src/lib -I ../_build/default/src/async -I ../_build/default/src/lwt
+RPCCAMLP4 = -I ../_build/default/camlp4
+RPCLINK = rpclib.cmxa rpclib_core.cmxa json.cmxa xml.cmxa
+
+CAMLP4 = camlp4o $(shell ocamlfind query type_conv -r -format "-I %d %a" -predicates syntax,preprocessor) $(RPC) $(RPCCAMLP4) rpclib_syntax.cma
+PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/default/ppx/ppx_deriving_rpc.cma
+
 EXAMPLES = \
 	all_types \
 	phantom \
@@ -31,10 +38,10 @@ client.opt: idl_test.cmx idl_test.cmi client.cmx
 	$(OCAMLOPT) -linkpkg -package $(PACKS) $(RPC) $(RPCLINK) -o $@ idl_test.cmx client.cmx
 
 client_lwt.opt: idl_test.cmx idl_test.cmi client_lwt.cmx
-	$(OCAMLOPT) -linkpkg -package $(PACKS),lwt,lwt.unix,rpclib.lwt -o $@ idl_test.cmx client_lwt.cmx
+	$(OCAMLOPT) -linkpkg -package $(PACKS),lwt,lwt.unix $(RPC) $(RPCLINK) rpclib_lwt.cmxa -o $@ idl_test.cmx client_lwt.cmx
 
 idl_test.cmx: idl_test.ml idl_test.cmi
-	$(OCAMLOPT) -package $(PACKS) $(RPC) $(RPCLINK) idl.cmxa -pp "camlp4o $(RPC) idl.cma" -c -o $@ $<
+	$(OCAMLOPT) -package $(PACKS) $(RPC) $(RPCLINK) $(RPCCAMLP4) idl.cmxa -pp "$(CAMLP4) idl.cma" -c -o $@ $<
 
 client_lwt_new.opt: client_lwt_new.cmx
 	$(OCAMLOPT) -linkpkg -package $(PACKS),lwt,lwt.unix $(RPC) $(RPCLINK) rpclib_lwt.cmxa -o $@ client_lwt_new.cmx
@@ -43,10 +50,10 @@ client_async_new.opt: client_async_new.cmx
 	$(OCAMLOPT) -linkpkg -thread -package $(PACKS),async $(RPC) $(RPCLINK) rpclib_async.cmxa -o $@ client_async_new.cmx
 
 client_lwt_new.opt: client_lwt_new.cmx
-	$(OCAMLOPT) -linkpkg -package $(PACKS),lwt,lwt.unix,rpclib.lwt -o $@ client_lwt_new.cmx
+	$(OCAMLOPT) -linkpkg -package $(PACKS),lwt,lwt.unix $(RPC) $(RPCLINK) rpclib_lwt.cmxa -o $@ client_lwt_new.cmx
 
 client_async_new.opt: client_async_new.cmx
-	$(OCAMLOPT) -linkpkg -thread -package $(PACKS),rpclib.async -o $@ client_async_new.cmx
+	$(OCAMLOPT) -linkpkg -thread -package $(PACKS),async $(RPC) $(RPCLINK) rpclib_async.cmxa -o $@ client_async_new.cmx
 
 %.opt: %.cmx
 	$(OCAMLOPT) -linkpkg -package $(PACKS) $(RPC) $(RPCLINK) -o $@ $<
@@ -61,13 +68,13 @@ client_async_new.cmx: client_async_new.ml
 	$(OCAMLOPT) $(PPXOPTS) $(OCAMLFLAGS) -package threads,$(PACKS),async $(RPC) $(RPCLINK) -thread -c -o $@ $<
 
 client_lwt.cmx: client_lwt.ml
-	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),lwt,lwt.unix,rpclib.lwt -c -o $@ $<
+	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),lwt,lwt.unix $(RPC) $(RPCLINK) rpclib_lwt.cmxa -c -o $@ $<
 
 client_lwt_new.cmx: client_lwt_new.ml
-	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS),lwt,lwt.unix,rpclib.lwt -c -o $@ $<
+	$(OCAMLOPT) $(PPXOPTS) $(OCAMLFLAGS) -package $(PACKS),lwt,lwt.unix $(RPC) $(RPCLINK) rpclib_lwt.cmxa -c -o $@ $<
 
 client_async_new.cmx: client_async_new.ml
-	$(OCAMLOPT) $(OCAMLFLAGS) -package threads,$(PACKS),async -thread -c -o $@ $<
+	$(OCAMLOPT) $(PPXOPTS) $(OCAMLFLAGS) -package threads,$(PACKS),async $(RPC) $(RPCLINK) -thread -c -o $@ $<
 
 %.cmx: %.ml
 	$(OCAMLOPT) $(OCAMLFLAGS) -package $(PACKS) $(RPC) $(RPCLINK) -pp "$(CAMLP4)" -c -o $@ $<

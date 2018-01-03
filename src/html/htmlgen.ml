@@ -28,6 +28,7 @@ let rec html_of_t : type a.a typ -> string list =
   | Unit -> print "unit"
   | Option x -> html_of_t x @ (print " option")
   | Tuple (a, b) -> html_of_t a @ (print " * ") @ (html_of_t b)
+  | Abstract _ -> print "<abstract>"
 
 (* Function inputs and outputs in a table *)
 let of_args args =
@@ -38,7 +39,7 @@ let of_args args =
     let description = arg.Param.description in
     tag "tr"
       (list [
-          tag "td" (tag "code" (string name));
+          tag "td" (tag "code" (string (match name with Some s -> s | None -> "unnamed")));
           tag "td" (string direction);
           tag "td" (tag "code" (list ty));
           tag "td" (string (String.concat " " description))
