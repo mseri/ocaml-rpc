@@ -9,7 +9,6 @@ tags: [
   "org:xapi-project"
 ]
 build-test: [
-    ["jbuilder" "build"]
     ["jbuilder" "runtest" "-p" name]
 ]
 depends: [
