@@ -1,6 +1,6 @@
 (executables
  ((names (test tytest))
-  (libraries (ppx_deriving ppx_deriving_rpc rpclib rpclib_core json lwt lwt.unix result rresult oUnit))
+  (libraries (ppx_deriving ppx_deriving_rpc rpclib rpclib.core rpclib.json lwt lwt.unix result rresult oUnit))
   (preprocess (pps (ppx_deriving_rpc)))
   (package ppx_deriving_rpc)
  ))
