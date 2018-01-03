@@ -28,12 +28,15 @@ EXAMPLES = \
 
 EXECS=$(foreach example, $(EXAMPLES), $(example).opt)
 
-.PHONY: all clean
-all: $(EXECS)
+.PHONY: all clean buildlib
+all: buildlib $(EXECS)
 	make $(EXECS:%=%.run)
 
 %.run: %
 	./$?
+	
+buildlib:
+	(cd .. && jbuilder build)
 
 client.opt: idl_test.cmx idl_test.cmi client.cmx
 	$(OCAMLOPT) -linkpkg -package $(PACKS) $(RPC) $(RPCLINK) -o $@ idl_test.cmx client.cmx
