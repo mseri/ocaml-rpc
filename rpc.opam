@@ -10,7 +10,7 @@ tags: [
 ]
 build-test: [
     ["jbuilder" "build"]
-    ["jbuilder" "runtest"]
+    ["jbuilder" "runtest" -p "name"]
 ]
 depends: [
   "rpclib"
