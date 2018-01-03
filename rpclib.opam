@@ -19,7 +19,7 @@ depends: [
 depopts: [
   "async" {< "v0.10.0"}
   "cow"
-  "js_of_ocaml"
+  "js_of_ocaml" {<= "2.8.4"}
   "lwt"
 ]
 

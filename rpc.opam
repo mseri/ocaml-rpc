@@ -18,7 +18,6 @@ depends: [
   "ppx_deriving_rpc"
   "async" {< "v0.10.0"}
   "cow"
-  "js_of_ocaml"
   "lwt"
 ]
 
