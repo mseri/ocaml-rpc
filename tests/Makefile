@@ -1,14 +1,15 @@
+PREFIX = ../_build/default
 OCAMLC = ocamlfind ocamlc
 OCAMLOPT = ocamlfind ocamlopt
 OCAMLFLAGS = -annot -g
 
 PACKS = unix,rresult,xmlm,yojson
-RPC = -I ../_build/default/src/lib -I ../_build/default/src/async -I ../_build/default/src/lwt
-RPCCAMLP4 = -I ../_build/default/camlp4
+RPC = -I $(PREFIX)/src/lib -I $(PREFIX)/src/async -I $(PREFIX)/src/lwt
+RPCCAMLP4 = -I $(PREFIX)/camlp4
 RPCLINK = rpclib.cmxa rpclib_core.cmxa json.cmxa xml.cmxa
 
 CAMLP4 = camlp4o $(shell ocamlfind query type_conv -r -format "-I %d %a" -predicates syntax,preprocessor) $(RPC) $(RPCCAMLP4) rpclib_syntax.cma
-PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/default/ppx/ppx_deriving_rpc.cma
+PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,$(PREFIX)/ppx/ppx_deriving_rpc.cma
 
 EXAMPLES = \
 	all_types \
