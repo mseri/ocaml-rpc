@@ -1,3 +1,43 @@
+2.2.0 (Dec 2017)
+* Remove warnings by extending pattern matches in {cmdliner,markdown}gen
+* Redefined `to_a` with a safer interface
+* Add a way to explicitly mark a tuple list as a dict
+* Allow the use ocamldoc tags rather than [@doc ...]
+* Add an 'abstract' typ.
+* Deprecate xmlrpc from/to char producers
+* Deprecate jsonrpc from/to char producers
+* Port the jsonrpc module to yojson
+    
+2.1.0 (Sep 2017)
+* Add defaults for polymorphic variants (@jonludlam)
+
+2.0.0 (Aug 2017)
+* Fix some cases of non-compliance with the JsonRpc v2.0 specs (@kc284)
+* Check the structure of error objects of JsonRpc v2.0 is spec compliant (@kc284)
+* Add new function to retrieve the version and id of JSON-RPC alongside the Rpc.call from the request body (@kc284)
+    
+1.9.53 (Jul 2017)
+* Delay evaluation of Cmdlinergen terms (API breaking change) (@jonludlam)
+* Accept marshalled ints when unmarshalling floats (@johnelse)
+
+1.9.52 (Jun 2017)
+* Fix compilation on MacOS X (@djs55)
+* Add a ClientExnRpc functor that takes an RPC impl as argument (@jonludlam)
+* ppx_deriving_rpc: Fix marshalling of dictionaries in the rpcty code too (@jonludlam)
+* ppx_deriving_rpc: Allow unnamed parameters in functions to introduce compatibility with the old camlp4 idl (@jonludlam)
+
+1.9.51 (May 2017)
+* Support Ocaml 4.03+ (@mseri)
+* Fixed javascript and htmlgen backends (@mseri)
+
+1.9.50 (Mar 2017)
+* Add a ppx to replace 'with rpc'
+* Add a new mechanism for defining IDLs (inspired by ctypes), to replace
+  the 'idl' syntax extension
+
+1.6.0 (July 2016)
+* Add support for JSON-RPC v2
+
 1.5.4 (June 2015)
 * Fix struct_extend handling of option types (with test)
 * Add opam file for development

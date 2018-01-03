@@ -88,6 +88,10 @@ let test_bad_string () =
 type test_float = float [@@deriving rpc]
 let test_float () =
   check_marshal_unmarshal (2.0, Rpc.Float 2.0, rpc_of_test_float, test_float_of_rpc)
+let test_float_from_int () =
+  check_unmarshal_ok 1.0 test_float_of_rpc (Rpc.Int 1L)
+let test_float_from_int32 () =
+  check_unmarshal_ok 1.0 test_float_of_rpc (Rpc.Int32 1l)
 let test_float_from_string () =
   check_unmarshal_ok 1.0 test_float_of_rpc (Rpc.String "1.0")
 let test_bad_float () =
@@ -216,6 +220,25 @@ let test_pvar_inherit () =
 let test_pvar_inherit2 () =
   check_marshal_unmarshal (`four "apple", Rpc.Enum [Rpc.String "four"; Rpc.String "apple"], rpc_of_test_pvar_inherit, test_pvar_inherit_of_rpc)
 
+type enum = [ `x | `y | `z | `default ] [@default `default] [@@deriving rpc]
+let test_default_enum () =
+  check_unmarshal_ok `default enum_of_rpc (Rpc.String "unknown_enum");
+  check_unmarshal_ok `default enum_of_rpc (Rpc.Enum [Rpc.String "thRee"; Rpc.Enum [ Rpc.Int 4L; Rpc.Int 5L]]);
+  check_unmarshal_error enum_of_rpc (Rpc.Enum [Rpc.Int 6L]);
+  check_unmarshal_error enum_of_rpc (Rpc.Dict ["foo",Rpc.String "bar"]);
+  check_unmarshal_error enum_of_rpc (Rpc.Int 1L);
+  check_unmarshal_error enum_of_rpc (Rpc.Float 1.0)
+
+type enum_string_map = (enum * string) list [@@deriving rpc]
+let test_enum_string_map () =
+  check_marshal_unmarshal ([`x, "x"; `y, "y"; `z, "z"], Rpc.Dict ["x", Rpc.String "x"; "y", Rpc.String "y"; "z", Rpc.String "z"], rpc_of_enum_string_map, enum_string_map_of_rpc)
+
+type enum2 = [`a | `b | `c] [@@deriving rpc]
+type enum_string_map2 = (enum2 * string) list [@dict] [@@deriving rpc]
+let test_enum_string_map2 () =
+    check_marshal_unmarshal ([`a, "x"; `b, "y"; `c, "z"], Rpc.Dict ["a", Rpc.String "x"; "b", Rpc.String "y"; "c", Rpc.String "z"], rpc_of_enum_string_map2, enum_string_map2_of_rpc)
+
+
 
 let suite =
   "basic_tests" >:::
@@ -237,6 +260,8 @@ let suite =
     "string" >:: test_string;
     "bad_string" >:: test_bad_string;
     "float" >:: test_float;
+    "float_from_int" >:: test_float_from_int;
+    "float_from_int32" >:: test_float_from_int32;
     "float_from_string" >:: test_float_from_string;
     "bad_float" >:: test_bad_float;
     "bad_float_string" >:: test_bad_float_string;
@@ -276,7 +301,9 @@ let suite =
     "polyvar_case" >:: test_polyvar_case;
     "pvar_inherit" >:: test_pvar_inherit;
     "pvar_inherit2" >:: test_pvar_inherit2;
-
+    "default_enum" >:: test_default_enum;
+    "enum_string_map" >:: test_enum_string_map;
+    "enum_string_map2" >:: test_enum_string_map2;
   ]
 
 let _ =
