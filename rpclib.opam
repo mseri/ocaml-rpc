@@ -17,7 +17,7 @@ depends: [
   "xmlm"
 ]
 depopts: [
-  "async"
+  "async" {< "v0.10.0"}
   "cow"
   "js_of_ocaml"
   "lwt"

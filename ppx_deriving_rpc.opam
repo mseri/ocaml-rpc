@@ -11,9 +11,8 @@ tags: [
 build: [["jbuilder" "build" "--only-packages" "ppx_deriving_rpc" "--root" "." "-j" jobs "@install"]]
 depends: [
   "jbuilder"  {build}
-  "ocamlfind" {build}
   "rpclib"
   "ppx_deriving"
-  "ocaml-migrate-parsetree"
-  "ppx_tools_versioned"
+  "ppx_tools"
+  "ppxfind"
 ]
