@@ -36,7 +36,7 @@ all: buildlib $(EXECS)
 	./$?
 	
 buildlib:
-	(cd .. && jbuilder build)
+	(cd ../../.. && jbuilder build)
 
 client.opt: idl_test.cmx idl_test.cmi client.cmx
 	$(OCAMLOPT) -linkpkg -package $(PACKS) $(RPC) $(RPCLINK) -o $@ idl_test.cmx client.cmx
