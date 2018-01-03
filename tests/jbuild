@@ -1,5 +1,6 @@
 
 (alias
  ((name   runtest)
+  (package rpc)
   (deps ((files_recursively_in .)))
   (action (run make PREFIX=..))))
