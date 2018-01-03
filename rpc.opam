@@ -8,11 +8,13 @@ tags: [
   "org:mirage"
   "org:xapi-project"
 ]
-build: [["jbuilder" "build" "--only-packages" "rpclib" "--root" "." "-j" jobs "@install"]]
 depends: [
-  "jbuilder"  {build}
-  "camlp4"
-  "result"
-  "type_conv"
   "rpclib"
+  "rpclib-camlp4"
+  "ppx_deriving_rpc"
+  "async" {< "v0.10.0"}
+  "cow"
+  "js_of_ocaml"
+  "lwt"
 ]
+

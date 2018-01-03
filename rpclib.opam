@@ -11,7 +11,6 @@ tags: [
 build: [["jbuilder" "build" "--only-packages" "rpclib" "--root" "." "-j" jobs "@install"]]
 depends: [
   "jbuilder"  {build}
-  "ocamlfind" {build}
   "cmdliner"
   "rresult"
   "xmlm"
