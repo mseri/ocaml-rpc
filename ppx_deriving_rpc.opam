@@ -14,8 +14,10 @@ depends: [
   "jbuilder"  {build}
   "cppo"      {build}
   "rpclib"
+  "rresult"
   "ppx_deriving"
   "ppx_tools"
   "ppxfind"
+  "lwt" {test}
 ]
 available: [ ocaml-version >= "4.03.0" ]
