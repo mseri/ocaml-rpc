@@ -16,14 +16,7 @@
   (deps (json.exe
          xapi.exe))
   (action (progn
-    (run ./all_types.exe)
-    (run ./client_async_new.exe)
-    (run ./client_lwt_new.exe)
-    (run ./dict.exe)
     (run ./json.exe)
-    (run ./option.exe)
-    (run ./phantom.exe)
-    (run ./variants.exe)
     (run ./xapi.exe)
     ))))
 
@@ -86,7 +79,7 @@
 
 (alias
  ((name   runtest)
-  (package rpc)
+  (package ppx_deriving_rpc)
   (deps (all_types.exe
          client_async_new.exe
          client_lwt_new.exe
@@ -101,10 +94,8 @@
     (run ./client_lwt_new.exe)
     (run ./dict.exe)
     (run ./encoding.exe)
-    (run ./json.exe)
     (run ./option.exe)
     (run ./phantom.exe)
     (run ./variants.exe)
-    (run ./xapi.exe)
     ))))
 
