@@ -1,17 +1,11 @@
-#if OCAML_VERSION < (4, 03, 0)
-    #define Pconst_string Const_string
-    #define Pcstr_tuple(x) x
-    #define lowercase String.lowercase
-#else
-    #define lowercase String.lowercase_ascii
-#endif
-
 open Longident
 open Asttypes
 open Parsetree
 open Location
 open Ast_helper
 open Ast_convenience
+
+let lowercase = String.lowercase_ascii
 
 let deriver = "rpcty"
 

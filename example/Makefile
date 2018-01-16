@@ -1,8 +1,6 @@
 OCAMLC = ocamlfind ocamlc
 OCAMLOPT = ocamlfind ocamlopt
 OCAMLFLAGS = -annot -g -thread
-CPPO = cppo
-CPPOFLAGS = -n -V OCAML:4.04.2
 
 PACKS = lwt,lwt.unix,result,cmdliner,rresult,threads,xmlm,yojson
 #,rpclib.cmdliner,rpclib.json,rpclib.html
@@ -12,9 +10,6 @@ RPCLINK = rpclib_core.cmxa rpclib.cmxa json.cmxa xml.cmxa cmdlinergen.cmxa markd
 PPXOPTS=-package ppx_deriving -ppxopt ppx_deriving,../_build/default/ppx/ppx_deriving_rpc.cma
 
 default: example example2 example3
-
-example.ml:
-	$(CPPO) $(CPPOFLAGS) -o example.ml example.cppo.ml
 
 example: example.ml
 	$(OCAMLOPT) $(OCAMLFLAGS) $(PPXOPTS) -linkpkg -package $(PACKS) $(RPC) $(RPCLINK) -o example -dsource example.ml 2> example.gen.ml
