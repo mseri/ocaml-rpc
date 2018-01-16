@@ -1,4 +1,4 @@
-type t = string [@@deriving rpc]
+type t = string with rpc
 
 let _ =
 	let t = "<provision><value><int>4</int></value>" in

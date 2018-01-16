@@ -9,6 +9,9 @@ tags: [
   "org:xapi-project"
 ]
 build: [["jbuilder" "build" "-p" name "-j" jobs]]
+build-test: [
+    ["jbuilder" "runtest" "-p" name]
+]
 depends: [
   "jbuilder"  {build}
   "camlp4"

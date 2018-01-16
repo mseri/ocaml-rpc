@@ -1,4 +1,4 @@
-type t = [ `foo | `bar of int * string ] [@@deriving rpc]
+type t = [ `foo | `bar of int * string ] with rpc
 
 let _ =
   let t1 = `foo in

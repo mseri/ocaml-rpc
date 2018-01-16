@@ -1,0 +1,8 @@
+(alias
+ ((name   runtest)
+  (package rpclib-camlp4)
+  (deps ((files_recursively_in .)))
+  (action (progn
+    (run make clean)
+    (run make PREFIX=..)
+))))

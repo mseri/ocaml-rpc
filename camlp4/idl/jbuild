@@ -1,0 +1,17 @@
+(rule
+ ((targets (p4_rpc.ml pa_module_conv.ml))
+  (action (progn
+           (copy ../p4_rpc.ml p4_rpc.ml)
+           (copy ../pa_module_conv.ml pa_module_conv.ml)
+          ))))
+
+(library
+ ((name idl)
+  (public_name rpclib-camlp4.idl)
+  (modules (p4_idl p4_rpc pa_module_conv))
+  (libraries (camlp4))
+  (flags (:standard -linkall))
+  (preprocess (action (run camlp4orf ${<})))
+  (wrapped false)
+ ))
+

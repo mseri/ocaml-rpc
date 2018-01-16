@@ -15,6 +15,7 @@ depends: [
   "rresult"
   "xmlm"
   "yojson"
+  "ppx_deriving_rpc" {test}
 ]
 depopts: [
   "async" {< "v0.10.0"}

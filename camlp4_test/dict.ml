@@ -1,6 +1,6 @@
-type key = string [@@deriving rpc]
+type key = string with rpc
 
-type t = (key * float) list [@@deriving rpc]
+type t = (key * float) list with rpc
 
 let _ =
   let t = [ "foo", 3. ; "bar", 4. ] in

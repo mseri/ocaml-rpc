@@ -15,10 +15,10 @@
 type t =
   | Foo of int
   | Bar of (int * float)
-  [@@deriving rpc]
+  with rpc
 
 module M = struct
-  type m = t [@@deriving rpc]
+  type m = t with rpc
 end
 
 type 'a x = {
@@ -29,11 +29,11 @@ type 'a x = {
   f2: (string * string list) array;
   f3: int32;
   f4: int64;
-  f5: int [@key "type"];
+  f5: int;
   f6: (unit * char) list;
-  f7: 'a list [@key "let"];
+  f7: 'a list;
   progress: int array;
-} [@@deriving rpc]
+} with rpc ("f5" -> "type", "f7" -> "let")
 
 let _ =
   let x = {

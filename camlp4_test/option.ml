@@ -3,7 +3,7 @@ type t = {
   bar : int list option;
   gni : int list;
   gna : int * (int option)
-} [@@deriving rpc]
+} with rpc
 
 let _ =
   let t1 = { foo = None; bar = None; gni = []; gna = 1, None } in
