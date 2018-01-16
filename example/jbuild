@@ -18,3 +18,21 @@
   (libraries (rpclib rpclib.cmdliner rpclib.markdown unix))
   (preprocess (pps (ppx_deriving_rpc)))
   ))
+
+(alias
+ ((name   runexamples)
+  (deps   (example.exe))
+  (package rpc)
+  (action (run ${<}))))
+
+(alias
+ ((name   runexamples)
+  (deps   (example2.exe))
+  (package rpc)
+  (action (run ${<}))))
+
+(alias
+ ((name   runexamples)
+  (deps   (example3_client.exe))
+  (package rpc)
+  (action (run ${<}))))
