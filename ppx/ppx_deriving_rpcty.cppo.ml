@@ -26,7 +26,7 @@ let rec split s =
     (String.sub s 0 i) :: split (String.sub s (i+1) (String.length s - i - 1))
   with Not_found -> [s]
 #else
-let split = String.split_on_char '\n'
+  let split = String.split_on_char '\n'
 #endif
 
 let convert_doc x = split x |> List.map (String.trim)
@@ -68,7 +68,7 @@ module Typ_of = struct
   let wrap_runtime decls =
     [%expr let open! Rpc.Types in [%e decls]]
 
-  let rec expr_of_typ  typ =
+  let rec expr_of_typ typ =
     let expr =
       match typ with
       | { ptyp_desc = Ptyp_constr ( { txt = lid }, args ) } when
@@ -88,8 +88,85 @@ module Typ_of = struct
         [%expr Option [%e expr_of_typ typ]]
       | { ptyp_desc = Ptyp_constr ( { txt = lid }, args ) } ->
         [%expr [%e Exp.ident (mknoloc (Ppx_deriving.mangle_lid (`Prefix "typ_of") lid))]]
-      | { ptyp_desc = Ptyp_variant (fields, _, _); ptyp_loc } ->
-        failwith "Ptyp_variant not handled"
+      | { ptyp_desc = Ptyp_variant (fields, _, _); ptyp_loc; ptyp_attributes } -> 
+        let default_case = attr_default typ.ptyp_attributes in
+        let first_field_name = match fields with
+          | Rtag (name, _, _, _) :: _ -> 
+#if OCAML_VERSION > (4, 05, 0)
+            let name = name.txt in
+#endif
+            name
+          | Rinherit _ :: _ | _ -> failwith "unimplemented1"
+        in
+        let madeup_name = Printf.sprintf "%s_plus_%d" first_field_name (List.length fields) in
+        let cases =
+          fields |> List.map (function
+              | Rinherit typ ->
+                let content = [%expr [%e (expr_of_typ typ)]] in
+                
+                let name = "___" in
+                let rpc_name = "___" in
+                let lower_rpc_name = rpc_name in
+                let variant = [%expr BoxedTag [%e record [
+                    "tname", str name;
+                    "tcontents", [%expr None];
+                    "tversion", [%expr None];
+                    "tdescription", [%expr None];
+                    "tpreview", [%expr None];
+                    "treview", [%expr None]
+                  ]]]
+                in
+                let vconstructor_case = Exp.case (Pat.constant (Pconst_string (lower_rpc_name, None))) [%expr Rresult.R.bind (t.tget [%e content]) ([%e [%expr Rresult.R.ok [%e str name]]])]
+                in
+                (variant, vconstructor_case)
+              | Rtag (name, attributes, _, typs) ->
+#if OCAML_VERSION > (4, 05, 0)
+                let name = name.txt in
+#endif
+                let rpc_name = attr_name name attributes in
+                let lower_rpc_name = String.lowercase_ascii rpc_name in
+                let contents = match typs with
+                  | [] ->  [%expr Unit]
+                  | typs_hd::typs_tl -> 
+                    List.fold_right 
+                      (fun t acc -> [%expr Tuple ([%e expr_of_typ t], [%e acc])])
+                      typs_tl
+                      [%expr [%e (expr_of_typ typs_hd)]]
+                in
+                let args = List.mapi (fun i _typ -> evar (argn i)) typs in
+                let pattern = List.mapi (fun i _typ -> pvar (argn i)) typs in
+                let vpreview_default = if List.length fields = 1 then [] else [Exp.case (Pat.any ()) [%expr None]] in
+                let vpreview = Exp.function_ ([
+                    Exp.case (pconstr name pattern) [%expr Some [%e tuple args]];
+                  ] @ vpreview_default)
+                in
+                let vreview = Exp.function_ [Exp.case (ptuple pattern) (constr name args)] in
+                let variant = [%expr BoxedTag [%e record [
+                    "tname", str rpc_name;
+                    "tcontents", contents;
+                    "tversion", (match attr_version attributes with | Some v -> [%expr Some [%e v]] | None -> [%expr None]);
+                    "tdescription", attr_doc attributes;
+                    "tpreview", vpreview;
+                    "treview", vreview
+                  ]]]
+                in
+                let vconstructor_case = Exp.case (Pat.constant (Pconst_string (lower_rpc_name, None))) [%expr Rresult.R.bind (t.tget [%e contents]) ([%e Exp.function_ [Exp.case (ptuple pattern) [%expr Rresult.R.ok [%e (constr name args)]]]])] 
+                in
+                (variant, vconstructor_case)
+            )
+        in
+        let default = [Exp.case (Pat.any ())
+                         (match default_case with
+                          | None -> [%expr Rresult.R.error_msg (Printf.sprintf "Unknown tag '%s'" s)]
+                          | Some d -> [%expr Result.Ok [%e d]])
+                      ] in
+        let vconstructor = [%expr fun s' t -> let s = String.lowercase_ascii s' in [%e Exp.match_ (evar "s") ((List.map snd cases) @ default)]] in
+        [%expr Variant ({
+            vname=[%e str madeup_name];
+            variants=([%e list (List.map fst cases)]);
+            vdefault=[%e match default_case with None -> [%expr None] | Some d -> [%expr Some [%e d]]];
+            vversion=[%e match attr_version ptyp_attributes with | Some v -> [%expr Some [%e v]] | None -> [%expr None];];
+            vconstructor=[%e vconstructor] } : [%t typ ] variant) ]
       | { ptyp_desc = Ptyp_any } ->
         failwith "Ptyp_any not handled"
       | { ptyp_desc = Ptyp_var name } ->
@@ -184,9 +261,9 @@ module Typ_of = struct
               let rpc_name = attr_name name pcd_attributes in
               let lower_rpc_name = String.lowercase_ascii rpc_name in
               let typs = match pcd_args with
-              | Pcstr_tuple(typs) -> typs
-              | Pcstr_record _ ->
-                raise_errorf "%s: record variants are not supported" deriver
+                | Pcstr_tuple(typs) -> typs
+                | Pcstr_record _ ->
+                  raise_errorf "%s: record variants are not supported" deriver
               in
               let contents = match typs with
                 | [] -> [%expr Unit]
@@ -215,8 +292,8 @@ module Typ_of = struct
         in
         let default = [Exp.case (Pat.any ())
                          (match default_case with
-                         | None -> [%expr Rresult.R.error_msg (Printf.sprintf "Unknown tag '%s'" s)]
-                         | Some d -> [%expr Result.Ok [%e d]])] in
+                          | None -> [%expr Rresult.R.error_msg (Printf.sprintf "Unknown tag '%s'" s)]
+                          | Some d -> [%expr Result.Ok [%e d]])] in
         let vconstructor = [%expr fun s' t -> let s = String.lowercase_ascii s' in [%e Exp.match_ (evar "s") ((List.map snd cases) @ default)]] in
         [ Vb.mk (pvar typ_of_lid) (wrap_runtime (polymorphize (
               [%expr Variant ({
